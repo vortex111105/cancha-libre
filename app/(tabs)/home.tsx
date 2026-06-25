@@ -1,0 +1,284 @@
+import React, { useState } from 'react';
+import {
+  View, Text, StyleSheet, SafeAreaView,
+  ScrollView, TouchableOpacity, TextInput,
+} from 'react-native';
+import { router } from 'expo-router';
+import { Colors } from '@/constants/Colors';
+import { TEAMS, MY_TEAM, Sport } from '@/constants/MockData';
+import { TeamCard } from '@/components/TeamCard';
+
+const SPORT_FILTERS: (Sport | 'Todos')[] = ['Todos', 'Fútbol 5', 'Fútbol 7', 'Fútbol 11'];
+
+export default function HomeScreen() {
+  const [sportFilter, setSportFilter] = useState<Sport | 'Todos'>('Todos');
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+
+  const filtered = TEAMS.filter(t => sportFilter === 'Todos' || t.sport === sportFilter);
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.topBar}>
+          <View>
+            <Text style={styles.greeting}>Hola, {MY_TEAM.name} 👋</Text>
+            <Text style={styles.location}>📍 {MY_TEAM.neighborhood}, {MY_TEAM.city}</Text>
+          </View>
+          <TouchableOpacity style={styles.notifBtn}>
+            <Text style={styles.notifIcon}>🔔</Text>
+            <View style={styles.notifDot} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.heroCard}>
+          <View style={styles.heroContent}>
+            <Text style={styles.heroTitle}>Encontrá{'\n'}tu próximo rival</Text>
+            <Text style={styles.heroSub}>{TEAMS.length} equipos cerca de vos</Text>
+            <TouchableOpacity
+              style={styles.heroBtn}
+              onPress={() => router.push('/(tabs)/search')}
+            >
+              <Text style={styles.heroBtnText}>🔍 Buscar rivales</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.heroEmoji}>⚽</Text>
+        </View>
+
+        <View style={styles.quickStats}>
+          <QuickStat label="Desafíos\npendientes" value="2" color={Colors.accent} />
+          <QuickStat label="Mensajes\nnuevos" value="3" color={Colors.blue} />
+          <QuickStat label="Próximo\npartido" value="Sáb" color={Colors.primary} />
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Equipos cerca de vos</Text>
+          <View style={styles.viewToggle}>
+            <TouchableOpacity
+              style={[styles.toggleBtn, viewMode === 'list' && styles.toggleActive]}
+              onPress={() => setViewMode('list')}
+            >
+              <Text style={styles.toggleText}>☰</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toggleBtn, viewMode === 'map' && styles.toggleActive]}
+              onPress={() => setViewMode('map')}
+            >
+              <Text style={styles.toggleText}>🗺</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScroll}
+          contentContainerStyle={styles.filterContent}
+        >
+          {SPORT_FILTERS.map(f => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterChip, sportFilter === f && styles.filterChipActive]}
+              onPress={() => setSportFilter(f)}
+            >
+              <Text style={[styles.filterChipText, sportFilter === f && styles.filterChipTextActive]}>
+                {f}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {viewMode === 'map' ? (
+          <MapPlaceholder count={filtered.length} />
+        ) : (
+          <View style={styles.teamList}>
+            {filtered.map(team => (
+              <TeamCard
+                key={team.id}
+                team={team}
+                onPress={() => router.push(`/team/${team.id}` as any)}
+                onChallenge={() => router.push(`/challenge/new?teamId=${team.id}` as any)}
+              />
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function QuickStat({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <View style={[styles.quickStatCard, { borderColor: color + '33' }]}>
+      <Text style={[styles.quickStatValue, { color }]}>{value}</Text>
+      <Text style={styles.quickStatLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function MapPlaceholder({ count }: { count: number }) {
+  return (
+    <View style={styles.mapPlaceholder}>
+      <Text style={styles.mapGrid}>
+        {'  🏢  🏢  🏢  🏢\n'}
+        {'  🏢     🦁  🏢\n'}
+        {'  🏢  🐺  🏢  🏢\n'}
+        {'  🏢  🏢  🦅  🏢\n'}
+        {'  🏢  🏢  🏢  🏢'}
+      </Text>
+      <View style={styles.mapOverlay}>
+        <Text style={styles.mapOverlayText}>🗺 Vista de mapa</Text>
+        <Text style={styles.mapOverlaySub}>{count} equipos en tu zona</Text>
+        <Text style={styles.mapOverlayNote}>
+          (Requiere permisos de ubicación en el dispositivo)
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.bg },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  greeting: { fontSize: 18, fontWeight: '700', color: Colors.text },
+  location: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
+  notifBtn: { position: 'relative', padding: 4 },
+  notifIcon: { fontSize: 22 },
+  notifDot: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.danger,
+    borderWidth: 1.5,
+    borderColor: Colors.bg,
+  },
+  heroCard: {
+    margin: 20,
+    marginTop: 12,
+    backgroundColor: Colors.primaryDark,
+    borderRadius: 24,
+    padding: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  heroContent: { flex: 1 },
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#fff',
+    lineHeight: 30,
+    marginBottom: 6,
+  },
+  heroSub: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.75)',
+    marginBottom: 16,
+  },
+  heroBtn: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  heroBtnText: { fontSize: 14, fontWeight: '700', color: Colors.primaryDark },
+  heroEmoji: { fontSize: 72, opacity: 0.25 },
+  quickStats: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    gap: 10,
+    marginBottom: 24,
+  },
+  quickStatCard: {
+    flex: 1,
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    padding: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  quickStatValue: {
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  quickStatLabel: {
+    fontSize: 10,
+    color: Colors.textDim,
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 13,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: Colors.text },
+  viewToggle: { flexDirection: 'row', gap: 4 },
+  toggleBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: Colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  toggleActive: {
+    backgroundColor: Colors.primaryMuted,
+    borderColor: Colors.primary,
+  },
+  toggleText: { fontSize: 16 },
+  filterScroll: { marginBottom: 16 },
+  filterContent: { paddingHorizontal: 20, gap: 8 },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: Colors.primaryMuted,
+    borderColor: Colors.primary,
+  },
+  filterChipText: { fontSize: 13, color: Colors.textMuted, fontWeight: '600' },
+  filterChipTextActive: { color: Colors.primary },
+  teamList: { paddingHorizontal: 20, paddingBottom: 24 },
+  mapPlaceholder: {
+    margin: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
+    height: 300,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapGrid: {
+    fontSize: 24,
+    lineHeight: 40,
+    textAlign: 'center',
+    opacity: 0.2,
+    position: 'absolute',
+  },
+  mapOverlay: { alignItems: 'center', gap: 6 },
+  mapOverlayText: { fontSize: 20, fontWeight: '700', color: Colors.text },
+  mapOverlaySub: { fontSize: 14, color: Colors.primary },
+  mapOverlayNote: { fontSize: 11, color: Colors.textDim, textAlign: 'center', marginTop: 4 },
+});
