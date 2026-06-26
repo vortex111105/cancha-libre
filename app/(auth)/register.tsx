@@ -26,8 +26,8 @@ export default function RegisterScreen() {
     if (error) {
       Alert.alert('Error de registro', error.message);
     } else {
-      // Redirige a crear equipo si el registro fue exitoso
-      router.push('/(auth)/create-team');
+      // Redirige al home directamente
+      router.replace('/(tabs)/home');
     }
   }
 

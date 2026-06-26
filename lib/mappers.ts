@@ -18,5 +18,6 @@ export function mapTeam(row: Record<string, any>): Team {
     availableDays: row.available_days ?? [],
     description: row.description ?? '',
     color: row.color ?? '#4ADE80',
+    inviteCode: row.invite_code,
   };
 }

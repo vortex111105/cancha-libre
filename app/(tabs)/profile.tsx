@@ -23,8 +23,17 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>🦁</Text>
-          <Text style={styles.emptyTitle}>Sin equipo aún</Text>
+          <Text style={styles.emptyIcon}>🏃</Text>
+          <Text style={styles.emptyTitle}>¡Aún no tenés equipo!</Text>
+          <Text style={{color: Colors.textMuted, textAlign: 'center', marginBottom: 20, paddingHorizontal: 40}}>Para ver tu perfil y estadísticas, unite a un equipo o creá el tuyo.</Text>
+          <View style={{flexDirection: 'row', gap: 12, paddingHorizontal: 40, width: '100%'}}>
+            <TouchableOpacity style={{flex: 1, backgroundColor: Colors.primary, paddingVertical: 14, borderRadius: 12, alignItems: 'center'}} onPress={() => require('expo-router').router.push('/(auth)/create-team')}>
+              <Text style={{fontSize: 14, fontWeight: '700', color: '#000'}}>Crear equipo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{flex: 1, backgroundColor: Colors.surface, paddingVertical: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: Colors.border}} onPress={() => require('expo-router').router.push('/team/join' as any)}>
+              <Text style={{fontSize: 14, fontWeight: '700', color: Colors.text}}>Unirme</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -140,6 +149,16 @@ export default function ProfileScreen() {
             </View>
           ))}
         </View>
+
+        {team.inviteCode && (
+          <View style={[styles.card, { borderColor: Colors.primary, backgroundColor: Colors.primaryMuted }]}>
+            <Text style={styles.cardTitle}>Código de invitación</Text>
+            <Text style={{fontSize: 13, color: Colors.textMuted, marginBottom: 8}}>Compartí este código para que se unan a tu equipo:</Text>
+            <View style={{alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surface, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: Colors.border}}>
+              <Text style={{fontSize: 26, fontWeight: '800', letterSpacing: 6, color: Colors.primary}}>{team.inviteCode}</Text>
+            </View>
+          </View>
+        )}
 
         <View style={styles.actions}>
           <TouchableOpacity

@@ -39,7 +39,7 @@ export default function HomeScreen() {
         <View style={styles.topBar}>
           <View>
             <Text style={styles.greeting}>
-              Hola, {myTeam?.name ?? 'equipo'} 👋
+              Hola, {myTeam?.name ?? 'Jugador'} 👋
             </Text>
             <Text style={styles.location}>
               📍 {myTeam ? `${myTeam.neighborhood}, ${myTeam.city}` : 'Buenos Aires'}
@@ -51,25 +51,43 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.heroCard}>
-          <View style={styles.heroContent}>
-            <Text style={styles.heroTitle}>Encontrá{'\n'}tu próximo rival</Text>
-            <Text style={styles.heroSub}>{teams.length} equipos cerca de vos</Text>
-            <TouchableOpacity
-              style={styles.heroBtn}
-              onPress={() => router.push('/(tabs)/search')}
-            >
-              <Text style={styles.heroBtnText}>🔍 Buscar rivales</Text>
-            </TouchableOpacity>
+        {!myTeam ? (
+          <View style={styles.noTeamCard}>
+            <Text style={styles.noTeamEmoji}>🏃</Text>
+            <Text style={styles.noTeamTitle}>¡Aún no tenés equipo!</Text>
+            <Text style={styles.noTeamSub}>Para jugar y desafiar rivales, unite a uno o creá el tuyo.</Text>
+            <View style={styles.noTeamBtns}>
+              <TouchableOpacity style={styles.noTeamBtnPrimary} onPress={() => router.push('/(auth)/create-team')}>
+                <Text style={styles.noTeamBtnPrimaryText}>Crear equipo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.noTeamBtnSecondary} onPress={() => router.push('/team/join' as any)}>
+                <Text style={styles.noTeamBtnSecondaryText}>Tengo un código</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <Text style={styles.heroEmoji}>⚽</Text>
-        </View>
+        ) : (
+          <>
+            <View style={styles.heroCard}>
+              <View style={styles.heroContent}>
+                <Text style={styles.heroTitle}>Encontrá{'\n'}tu próximo rival</Text>
+                <Text style={styles.heroSub}>{teams.length} equipos cerca de vos</Text>
+                <TouchableOpacity
+                  style={styles.heroBtn}
+                  onPress={() => router.push('/(tabs)/search')}
+                >
+                  <Text style={styles.heroBtnText}>🔍 Buscar rivales</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.heroEmoji}>⚽</Text>
+            </View>
 
-        <View style={styles.quickStats}>
-          <QuickStat label="Equipos\ncerca" value={teams.length.toString()} color={Colors.primary} />
-          <QuickStat label="Deporte\nfavorito" value={myTeam?.sport?.split(' ')[0] ?? '—'} color={Colors.blue} />
-          <QuickStat label="Nivel\nactual" value={myTeam?.level?.slice(0, 3) ?? '—'} color={Colors.accent} />
-        </View>
+            <View style={styles.quickStats}>
+              <QuickStat label="Equipos\ncerca" value={teams.length.toString()} color={Colors.primary} />
+              <QuickStat label="Deporte\nfavorito" value={myTeam?.sport?.split(' ')[0] ?? '—'} color={Colors.blue} />
+              <QuickStat label="Nivel\nactual" value={myTeam?.level?.slice(0, 3) ?? '—'} color={Colors.accent} />
+            </View>
+          </>
+        )}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Equipos cerca de vos</Text>
@@ -222,6 +240,24 @@ const styles = StyleSheet.create({
   },
   heroBtnText: { fontSize: 14, fontWeight: '700', color: Colors.primaryDark },
   heroEmoji: { fontSize: 72, opacity: 0.25 },
+  noTeamCard: {
+    margin: 20,
+    marginTop: 12,
+    backgroundColor: Colors.card,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  noTeamEmoji: { fontSize: 48, marginBottom: 12 },
+  noTeamTitle: { fontSize: 20, fontWeight: '800', color: Colors.text, marginBottom: 6 },
+  noTeamSub: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', marginBottom: 20, lineHeight: 20 },
+  noTeamBtns: { flexDirection: 'row', gap: 12, width: '100%' },
+  noTeamBtnPrimary: { flex: 1, backgroundColor: Colors.primary, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  noTeamBtnPrimaryText: { fontSize: 14, fontWeight: '700', color: '#000' },
+  noTeamBtnSecondary: { flex: 1, backgroundColor: Colors.surface, paddingVertical: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: Colors.border },
+  noTeamBtnSecondaryText: { fontSize: 14, fontWeight: '700', color: Colors.text },
   quickStats: {
     flexDirection: 'row',
     paddingHorizontal: 20,

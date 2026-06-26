@@ -19,6 +19,7 @@ export interface Team {
   description: string;
   availableDays: string[];
   rating: number;
+  inviteCode?: string;
 }
 
 export interface Challenge {

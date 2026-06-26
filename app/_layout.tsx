@@ -59,6 +59,14 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="team/join"
+          options={{
+            title: 'Unirse a equipo',
+            headerBackTitle: 'Volver',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
           name="chat/[id]"
           options={{
             title: 'Chat',
