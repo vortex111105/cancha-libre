@@ -19,9 +19,15 @@ export function LevelBadge({ level }: { level: Level }) {
 }
 
 export function SportBadge({ sport }: { sport: string }) {
+  const getIcon = (s: string) => {
+    if (s.includes('Básquet')) return '🏀';
+    if (s.includes('Pádel')) return '🎾';
+    return '⚽';
+  };
+
   return (
     <View style={styles.sportBadge}>
-      <Text style={styles.sportText}>{sport}</Text>
+      <Text style={styles.sportText}>{getIcon(sport)} {sport}</Text>
     </View>
   );
 }

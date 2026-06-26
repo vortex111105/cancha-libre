@@ -1,34 +1,118 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
-  ScrollView, TouchableOpacity, TextInput, Alert,
+  ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
-import { TEAMS, FIELDS } from '@/constants/MockData';
+import type { Team } from '@/constants/MockData';
+import { supabase } from '@/lib/supabase';
+import { mapTeam } from '@/lib/mappers';
+import { useMyTeam } from '@/hooks/useMyTeam';
 
 const TIME_SLOTS = ['18:00', '19:00', '20:00', '21:00', '22:00'];
-const DAYS_AHEAD = ['Hoy', 'Mañana', 'Sáb 28 Jun', 'Dom 29 Jun', 'Lun 30 Jun', 'Mar 1 Jul'];
+
+function getNextDays(): string[] {
+  const days = [];
+  const now = new Date();
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() + i);
+    if (i === 0) { days.push('Hoy'); continue; }
+    if (i === 1) { days.push('Mañana'); continue; }
+    days.push(d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' }));
+  }
+  return days;
+}
+
+type Field = { id: string; name: string; address: string; sports: string[]; price: number; rating: number; available: boolean };
 
 export default function NewChallengeScreen() {
   const { teamId } = useLocalSearchParams<{ teamId: string }>();
-  const team = TEAMS.find(t => t.id === teamId) ?? TEAMS[0];
+  const { teamId: myTeamId } = useMyTeam();
 
+  const [team, setTeam] = useState<Team | null>(null);
+  const [fields, setFields] = useState<Field[]>([]);
   const [selectedDay, setSelectedDay] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedField, setSelectedField] = useState('');
   const [message, setMessage] = useState('');
   const [bookField, setBookField] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
 
+  const DAYS_AHEAD = getNextDays();
   const canSend = selectedDay && selectedTime && message.trim().length > 0;
 
-  const handleSend = () => {
-    Alert.alert(
-      '¡Desafío enviado! ⚡',
-      `${team.name} recibirá tu propuesta y podrán coordinar los detalles por el chat.`,
-      [{ text: 'Genial', onPress: () => router.dismissAll() }]
-    );
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      supabase.from('cl_teams').select('*').eq('id', teamId).single(),
+      supabase.from('cl_fields').select('*').eq('available', true),
+    ]).then(([{ data: teamData }, { data: fieldsData }]) => {
+      if (teamData) setTeam(mapTeam(teamData));
+      setFields(fieldsData ?? []);
+      setLoading(false);
+    });
+  }, [teamId]);
+
+  const handleSend = async () => {
+    if (!canSend || !myTeamId || !teamId) return;
+    setSending(true);
+    try {
+      const smaller = myTeamId < teamId ? myTeamId : teamId;
+      const larger  = myTeamId < teamId ? teamId : myTeamId;
+
+      let convId: string | undefined;
+      const { data: existing } = await supabase
+        .from('cl_conversations')
+        .select('id')
+        .eq('team1_id', smaller)
+        .eq('team2_id', larger)
+        .maybeSingle();
+
+      if (existing?.id) {
+        convId = existing.id;
+      } else {
+        const { data: created } = await supabase
+          .from('cl_conversations')
+          .insert({ team1_id: smaller, team2_id: larger })
+          .select('id')
+          .single();
+        convId = created?.id;
+      }
+
+      const { error } = await supabase.from('cl_challenges').insert({
+        from_team: myTeamId,
+        to_team: teamId,
+        proposed_date: selectedDay,
+        proposed_time: selectedTime,
+        field_id: selectedField || null,
+        message: message.trim(),
+        status: 'pending',
+      });
+
+      if (error) throw error;
+
+      Alert.alert(
+        '¡Desafío enviado! ⚡',
+        `${team?.name ?? 'El equipo'} recibirá tu propuesta y podrán coordinar por el chat.`,
+        [{ text: 'Genial', onPress: () => router.dismissAll() }]
+      );
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'No se pudo enviar el desafío');
+    } finally {
+      setSending(false);
+    }
   };
+
+  if (loading || !team) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator color={Colors.primary} style={{ flex: 1 }} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -77,52 +161,54 @@ export default function NewChallengeScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.fieldToggleRow}>
-            <Text style={styles.sectionTitle}>Reservar cancha</Text>
-            <TouchableOpacity
-              style={[styles.toggle, bookField && styles.toggleOn]}
-              onPress={() => setBookField(!bookField)}
-            >
-              <View style={[styles.toggleThumb, bookField && styles.toggleThumbOn]} />
-            </TouchableOpacity>
-          </View>
-          {bookField ? (
-            <View style={styles.fieldList}>
-              {FIELDS.map(field => (
-                <TouchableOpacity
-                  key={field.id}
-                  style={[
-                    styles.fieldCard,
-                    !field.available && styles.fieldCardDisabled,
-                    selectedField === field.id && styles.fieldCardSelected,
-                  ]}
-                  onPress={() => field.available && setSelectedField(field.id)}
-                  disabled={!field.available}
-                >
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldName}>{field.name}</Text>
-                    <Text style={styles.fieldAddress}>{field.address}</Text>
-                    <Text style={styles.fieldSports}>{field.sports.join(' · ')}</Text>
-                  </View>
-                  <View style={styles.fieldRight}>
-                    <Text style={styles.fieldPrice}>${field.price.toLocaleString()}/h</Text>
-                    <Text style={styles.fieldRating}>⭐ {field.rating}</Text>
-                    {!field.available && (
-                      <View style={styles.occupiedBadge}>
-                        <Text style={styles.occupiedText}>Ocupada</Text>
-                      </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
+        {fields.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.fieldToggleRow}>
+              <Text style={styles.sectionTitle}>Reservar cancha</Text>
+              <TouchableOpacity
+                style={[styles.toggle, bookField && styles.toggleOn]}
+                onPress={() => setBookField(!bookField)}
+              >
+                <View style={[styles.toggleThumb, bookField && styles.toggleThumbOn]} />
+              </TouchableOpacity>
             </View>
-          ) : (
-            <Text style={styles.fieldNote}>
-              Activá esta opción para reservar la cancha directamente desde la app. El costo se divide automáticamente entre ambos equipos.
-            </Text>
-          )}
-        </View>
+            {bookField ? (
+              <View style={styles.fieldList}>
+                {fields.map(field => (
+                  <TouchableOpacity
+                    key={field.id}
+                    style={[
+                      styles.fieldCard,
+                      !field.available && styles.fieldCardDisabled,
+                      selectedField === field.id && styles.fieldCardSelected,
+                    ]}
+                    onPress={() => field.available && setSelectedField(field.id)}
+                    disabled={!field.available}
+                  >
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldName}>{field.name}</Text>
+                      <Text style={styles.fieldAddress}>{field.address}</Text>
+                      <Text style={styles.fieldSports}>{(field.sports ?? []).join(' · ')}</Text>
+                    </View>
+                    <View style={styles.fieldRight}>
+                      <Text style={styles.fieldPrice}>${(field.price ?? 0).toLocaleString()}/h</Text>
+                      <Text style={styles.fieldRating}>⭐ {field.rating}</Text>
+                      {!field.available && (
+                        <View style={styles.occupiedBadge}>
+                          <Text style={styles.occupiedText}>Ocupada</Text>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.fieldNote}>
+                Activá esta opción para reservar la cancha directamente desde la app. El costo se divide automáticamente entre ambos equipos.
+              </Text>
+            )}
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Mensaje al equipo</Text>
@@ -134,18 +220,20 @@ export default function NewChallengeScreen() {
             placeholderTextColor={Colors.textDim}
             multiline
             numberOfLines={4}
+            maxLength={200}
           />
           <Text style={styles.charCount}>{message.length}/200</Text>
         </View>
 
         <TouchableOpacity
-          style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
+          style={[styles.sendBtn, (!canSend || sending) && styles.sendBtnDisabled]}
           onPress={handleSend}
-          disabled={!canSend}
+          disabled={!canSend || sending}
         >
-          <Text style={[styles.sendBtnText, !canSend && styles.sendBtnTextDisabled]}>
-            ⚡ Enviar desafío
-          </Text>
+          {sending
+            ? <ActivityIndicator color="#000" />
+            : <Text style={[styles.sendBtnText, !canSend && styles.sendBtnTextDisabled]}>⚡ Enviar desafío</Text>
+          }
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -196,10 +284,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  chipSelected: {
-    backgroundColor: Colors.primaryMuted,
-    borderColor: Colors.primary,
-  },
+  chipSelected: { backgroundColor: Colors.primaryMuted, borderColor: Colors.primary },
   chipText: { fontSize: 14, color: Colors.textMuted, fontWeight: '600' },
   chipTextSelected: { color: Colors.primary },
   timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -211,10 +296,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  timeBtnSelected: {
-    backgroundColor: Colors.primaryMuted,
-    borderColor: Colors.primary,
-  },
+  timeBtnSelected: { backgroundColor: Colors.primaryMuted, borderColor: Colors.primary },
   timeBtnText: { fontSize: 15, color: Colors.textMuted, fontWeight: '600' },
   timeBtnTextSelected: { color: Colors.primary },
   fieldToggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

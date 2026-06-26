@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
-  ScrollView, TouchableOpacity, TextInput,
+  ScrollView, TouchableOpacity, TextInput, ActivityIndicator
 } from 'react-native';
 import { router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
-import { TEAMS, Level, Sport } from '@/constants/MockData';
+import { Level, Sport, Team } from '@/constants/MockData';
 import { TeamCard } from '@/components/TeamCard';
+import { supabase } from '@/lib/supabase';
+import { mapTeam } from '@/lib/mappers';
 
-const SPORTS: (Sport | 'Todos')[] = ['Todos', 'Fútbol 5', 'Fútbol 7', 'Fútbol 11'];
+const SPORTS: (Sport | 'Todos')[] = ['Todos', 'Fútbol 5vs5', 'Fútbol 7vs7', 'Fútbol 8vs8', 'Fútbol 11vs11', 'Básquet 3x3', 'Básquet 5x5', 'Pádel Single (1vs1)', 'Pádel Parejas'];
 const LEVELS: (Level | 'Todos')[] = ['Todos', 'Principiante', 'Intermedio', 'Avanzado'];
 const DISTANCES = ['Todos', '< 2km', '< 5km', '< 10km'];
 
@@ -18,8 +20,20 @@ export default function SearchScreen() {
   const [level, setLevel] = useState<Level | 'Todos'>('Todos');
   const [distance, setDistance] = useState('Todos');
   const [showFilters, setShowFilters] = useState(false);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = TEAMS.filter(t => {
+  React.useEffect(() => {
+    async function fetchTeams() {
+      setLoading(true);
+      const { data } = await supabase.from('cl_teams').select('*');
+      setTeams((data ?? []).map(mapTeam));
+      setLoading(false);
+    }
+    fetchTeams();
+  }, []);
+
+  const filtered = teams.filter(t => {
     const matchName = t.name.toLowerCase().includes(query.toLowerCase()) ||
       t.neighborhood.toLowerCase().includes(query.toLowerCase());
     const matchSport = sport === 'Todos' || t.sport === sport;
@@ -104,11 +118,13 @@ export default function SearchScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       >
-        {filtered.length === 0 ? (
+        {loading ? (
+          <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+        ) : filtered.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>😅</Text>
-            <Text style={styles.emptyTitle}>Sin resultados</Text>
-            <Text style={styles.emptyText}>Probá cambiando los filtros o ampliando la zona</Text>
+            <Text style={styles.emptyIcon}>🤷‍♂️</Text>
+            <Text style={styles.emptyTitle}>No hay resultados</Text>
+            <Text style={styles.emptyText}>Probá cambiando los filtros o buscando otro nombre</Text>
           </View>
         ) : (
           filtered.map(team => (

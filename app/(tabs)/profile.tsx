@@ -1,17 +1,41 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
-  ScrollView, TouchableOpacity, Alert,
+  ScrollView, TouchableOpacity, Alert, ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
-import { MY_TEAM } from '@/constants/MockData';
 import { LevelBadge, SportBadge } from '@/components/Badge';
+import { supabase } from '@/lib/supabase';
+import { useMyTeam } from '@/hooks/useMyTeam';
 
 export default function ProfileScreen() {
-  const team = MY_TEAM;
+  const { team, loading } = useMyTeam();
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator color={Colors.primary} style={{ flex: 1 }} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!team) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.empty}>
+          <Text style={styles.emptyIcon}>🦁</Text>
+          <Text style={styles.emptyTitle}>Sin equipo aún</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const total = team.wins + team.losses + team.draws;
-  const winRate = Math.round((team.wins / total) * 100);
+  const winRate = total > 0 ? Math.round((team.wins / total) * 100) : 0;
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -66,7 +90,7 @@ export default function ProfileScreen() {
           <View style={styles.daysGrid}>
             {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day, i) => {
               const fullDays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-              const active = team.availableDays.includes(fullDays[i]);
+              const active = (team.availableDays ?? []).includes(fullDays[i]);
               return (
                 <View key={day} style={[styles.dayCell, active && styles.dayCellActive]}>
                   <Text style={[styles.dayCellText, active && styles.dayCellTextActive]}>{day}</Text>
@@ -126,7 +150,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.logoutBtn}
-            onPress={() => router.replace('/(auth)/login')}
+            onPress={handleLogout}
           >
             <Text style={styles.logoutBtnText}>Cerrar sesión</Text>
           </TouchableOpacity>
@@ -310,4 +334,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoutBtnText: { fontSize: 14, color: Colors.danger, fontWeight: '600' },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  emptyIcon: { fontSize: 48 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.text },
 });

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, SafeAreaView, ScrollView,
+  StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
+import { supabase } from '@/lib/supabase';
 
-const SPORTS = ['Fútbol 5', 'Fútbol 7', 'Fútbol 11'];
+const SPORTS = ['Fútbol 5vs5', 'Fútbol 7vs7', 'Fútbol 8vs8', 'Fútbol 11vs11', 'Básquet 3x3', 'Básquet 5x5', 'Pádel Single (1vs1)', 'Pádel Parejas'];
 const LEVELS = ['Principiante', 'Intermedio', 'Avanzado'];
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const AVATARS = ['🦁', '🐺', '🦅', '🐯', '🦊', '🐻', '🦜', '🐬', '🦈', '🦏', '🐲', '⚡'];
@@ -14,17 +15,64 @@ const AVATARS = ['🦁', '🐺', '🦅', '🐯', '🦊', '🐻', '🦜', '🐬',
 export default function CreateTeamScreen() {
   const [teamName, setTeamName] = useState('');
   const [neighborhood, setNeighborhood] = useState('');
-  const [sport, setSport] = useState('Fútbol 5');
+  const [sport, setSport] = useState('Fútbol 5vs5');
   const [level, setLevel] = useState('Intermedio');
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [avatar, setAvatar] = useState('🦁');
   const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const toggleDay = (day: string) => {
     setSelectedDays(prev =>
       prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
     );
   };
+
+  async function handleCreateTeam() {
+    if (!teamName.trim()) return Alert.alert('Error', 'El nombre del equipo es obligatorio');
+    if (!neighborhood.trim()) return Alert.alert('Error', 'El barrio es obligatorio');
+
+    setLoading(true);
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('No hay sesión activa');
+
+      const { data: team, error: teamError } = await supabase
+        .from('cl_teams')
+        .insert({
+          user_id: user.id,
+          name: teamName.trim(),
+          avatar,
+          sport,
+          level,
+          neighborhood: neighborhood.trim(),
+          city: 'Buenos Aires',
+          description: description.trim() || null,
+          available_days: selectedDays,
+          color: '#4ADE80',
+        })
+        .select()
+        .single();
+
+      if (teamError) throw teamError;
+
+      const { error: userRecordError } = await supabase
+        .from('cl_users')
+        .upsert({
+          id: user.id,
+          email: user.email ?? '',
+          team_id: team.id,
+        });
+
+      if (userRecordError) throw userRecordError;
+
+      router.replace('/(tabs)/home');
+    } catch (err: any) {
+      Alert.alert('Error al crear el equipo', err.message ?? 'Intentalo de nuevo');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -135,10 +183,14 @@ export default function CreateTeamScreen() {
         </View>
 
         <TouchableOpacity
-          style={styles.primaryBtn}
-          onPress={() => router.replace('/(tabs)/home')}
+          style={[styles.primaryBtn, loading && { opacity: 0.7 }]}
+          onPress={handleCreateTeam}
+          disabled={loading}
         >
-          <Text style={styles.primaryBtnText}>⚽ ¡Crear mi equipo!</Text>
+          {loading
+            ? <ActivityIndicator color="#000" />
+            : <Text style={styles.primaryBtnText}>⚽ ¡Crear mi equipo!</Text>
+          }
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

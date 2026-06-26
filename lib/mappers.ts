@@ -1,0 +1,22 @@
+import type { Team } from '@/constants/MockData';
+
+export function mapTeam(row: Record<string, any>): Team {
+  return {
+    id: row.id,
+    name: row.name,
+    avatar: row.avatar ?? '⚽',
+    sport: row.sport,
+    level: row.level,
+    neighborhood: row.neighborhood ?? '',
+    city: row.city ?? 'Buenos Aires',
+    wins: row.wins ?? 0,
+    losses: row.losses ?? 0,
+    draws: row.draws ?? 0,
+    rating: row.rating ?? 0,
+    distance: 0,
+    members: row.members ?? 1,
+    availableDays: row.available_days ?? [],
+    description: row.description ?? '',
+    color: row.color ?? '#4ADE80',
+  };
+}

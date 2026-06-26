@@ -1,54 +1,143 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
   FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/Colors';
-import { TEAMS, MESSAGES, Message } from '@/constants/MockData';
+import { supabase } from '@/lib/supabase';
+import { mapTeam } from '@/lib/mappers';
+import { useMyTeam } from '@/hooks/useMyTeam';
+import type { Team, Message } from '@/constants/MockData';
+
+type RawMessage = {
+  id: string;
+  text: string;
+  sender_team_id: string;
+  created_at: string;
+};
 
 export default function ChatScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const team = TEAMS.find(t => t.id === id) ?? TEAMS[0];
+  const { id: otherTeamId } = useLocalSearchParams<{ id: string }>();
+  const { teamId: myTeamId } = useMyTeam();
 
-  const [messages, setMessages] = useState<Message[]>(MESSAGES);
+  const [otherTeam, setOtherTeam] = useState<Team | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(true);
   const listRef = useRef<FlatList>(null);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    const newMsg: Message = {
-      id: `m${Date.now()}`,
-      text: input.trim(),
-      sender: 'me',
-      time: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-    };
-    setMessages(prev => [...prev, newMsg]);
+  const init = useCallback(async () => {
+    if (!myTeamId || !otherTeamId) return;
+
+    const { data: teamData } = await supabase
+      .from('cl_teams')
+      .select('*')
+      .eq('id', otherTeamId)
+      .single();
+
+    if (teamData) setOtherTeam(mapTeam(teamData));
+
+    const smaller = myTeamId < otherTeamId ? myTeamId : otherTeamId;
+    const larger  = myTeamId < otherTeamId ? otherTeamId : myTeamId;
+
+    const { data: existing } = await supabase
+      .from('cl_conversations')
+      .select('id')
+      .eq('team1_id', smaller)
+      .eq('team2_id', larger)
+      .maybeSingle();
+
+    let convId = existing?.id;
+    if (!convId) {
+      const { data: created } = await supabase
+        .from('cl_conversations')
+        .insert({ team1_id: smaller, team2_id: larger })
+        .select('id')
+        .single();
+      convId = created?.id;
+    }
+
+    if (!convId) { setLoading(false); return; }
+    setConversationId(convId);
+
+    const { data: msgs } = await supabase
+      .from('cl_messages')
+      .select('id, text, sender_team_id, created_at')
+      .eq('conversation_id', convId)
+      .order('created_at', { ascending: true });
+
+    setMessages(rawToMessages(msgs ?? [], myTeamId));
+    setLoading(false);
+  }, [myTeamId, otherTeamId]);
+
+  useEffect(() => { init(); }, [init]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const channel = supabase
+      .channel(`chat:${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'cl_messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const raw = payload.new as RawMessage;
+          setMessages(prev => [
+            ...prev,
+            {
+              id: raw.id,
+              text: raw.text,
+              sender: raw.sender_team_id === myTeamId ? 'me' : 'them',
+              time: new Date(raw.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+            },
+          ]);
+          setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [conversationId, myTeamId]);
+
+  const handleSend = async () => {
+    if (!input.trim() || !conversationId || !myTeamId) return;
+    const text = input.trim();
     setInput('');
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+    await supabase.from('cl_messages').insert({
+      conversation_id: conversationId,
+      sender_team_id: myTeamId,
+      text,
+    });
   };
+
+  if (loading || !otherTeam) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator color={Colors.primary} style={{ flex: 1 }} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.chatHeader}>
-        <View style={[styles.avatar, { borderColor: team.color }]}>
-          <Text style={styles.avatarText}>{team.avatar}</Text>
+        <View style={[styles.avatar, { borderColor: otherTeam.color }]}>
+          <Text style={styles.avatarText}>{otherTeam.avatar}</Text>
         </View>
         <View>
-          <Text style={styles.teamName}>{team.name}</Text>
-          <Text style={styles.teamSub}>{team.neighborhood} · {team.sport}</Text>
+          <Text style={styles.teamName}>{otherTeam.name}</Text>
+          <Text style={styles.teamSub}>{otherTeam.neighborhood} · {otherTeam.sport}</Text>
         </View>
         <TouchableOpacity style={styles.infoBtn}>
           <Text style={styles.infoBtnText}>ℹ</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.matchBanner}>
-        <Text style={styles.matchBannerText}>
-          ⚡ Desafío pendiente · Sáb 28 Jun · 18:00
-        </Text>
-        <TouchableOpacity>
-          <Text style={styles.matchBannerAction}>Ver →</Text>
         </TouchableOpacity>
       </View>
 
@@ -64,34 +153,37 @@ export default function ChatScreen() {
           contentContainerStyle={styles.messageList}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-          renderItem={({ item, index }) => {
-            const prevMsg = messages[index - 1];
-            const showTime = !prevMsg || prevMsg.sender !== item.sender;
-            return (
+          ListEmptyComponent={
+            <View style={styles.emptyChat}>
+              <Text style={styles.emptyChatText}>
+                Empezá la conversación con {otherTeam.name}
+              </Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <View style={[
+              styles.messageWrapper,
+              item.sender === 'me' ? styles.messageRight : styles.messageLeft,
+            ]}>
               <View style={[
-                styles.messageWrapper,
-                item.sender === 'me' ? styles.messageRight : styles.messageLeft,
+                styles.bubble,
+                item.sender === 'me' ? styles.bubbleMe : styles.bubbleThem,
               ]}>
-                <View style={[
-                  styles.bubble,
-                  item.sender === 'me' ? styles.bubbleMe : styles.bubbleThem,
-                ]}>
-                  <Text style={[
-                    styles.bubbleText,
-                    item.sender === 'me' ? styles.bubbleTextMe : styles.bubbleTextThem,
-                  ]}>
-                    {item.text}
-                  </Text>
-                </View>
                 <Text style={[
-                  styles.msgTime,
-                  item.sender === 'me' ? styles.msgTimeRight : styles.msgTimeLeft,
+                  styles.bubbleText,
+                  item.sender === 'me' ? styles.bubbleTextMe : styles.bubbleTextThem,
                 ]}>
-                  {item.time}
+                  {item.text}
                 </Text>
               </View>
-            );
-          }}
+              <Text style={[
+                styles.msgTime,
+                item.sender === 'me' ? styles.msgTimeRight : styles.msgTimeLeft,
+              ]}>
+                {item.time}
+              </Text>
+            </View>
+          )}
         />
 
         <View style={styles.inputBar}>
@@ -106,6 +198,7 @@ export default function ChatScreen() {
             placeholderTextColor={Colors.textDim}
             multiline
             maxLength={500}
+            onSubmitEditing={handleSend}
           />
           <TouchableOpacity
             style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]}
@@ -118,6 +211,15 @@ export default function ChatScreen() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+}
+
+function rawToMessages(rows: RawMessage[], myTeamId: string): Message[] {
+  return rows.map(row => ({
+    id: row.id,
+    text: row.text,
+    sender: row.sender_team_id === myTeamId ? 'me' : 'them',
+    time: new Date(row.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+  }));
 }
 
 const styles = StyleSheet.create({
@@ -155,19 +257,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   infoBtnText: { fontSize: 18, color: Colors.textMuted },
-  matchBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.accentMuted,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.accent + '44',
-  },
-  matchBannerText: { fontSize: 12, color: Colors.accent, fontWeight: '600' },
-  matchBannerAction: { fontSize: 12, color: Colors.accent, fontWeight: '700' },
-  messageList: { paddingHorizontal: 16, paddingVertical: 16, gap: 4 },
+  emptyChat: { flex: 1, alignItems: 'center', paddingTop: 80 },
+  emptyChatText: { fontSize: 14, color: Colors.textDim, textAlign: 'center' },
+  messageList: { paddingHorizontal: 16, paddingVertical: 16, gap: 4, flexGrow: 1 },
   messageWrapper: { marginBottom: 10 },
   messageLeft: { alignItems: 'flex-start' },
   messageRight: { alignItems: 'flex-end' },

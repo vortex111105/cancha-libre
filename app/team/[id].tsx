@@ -1,23 +1,48 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
-  ScrollView, TouchableOpacity, Alert,
+  ScrollView, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
-import { TEAMS } from '@/constants/MockData';
+import type { Team } from '@/constants/MockData';
 import { LevelBadge, SportBadge } from '@/components/Badge';
+import { supabase } from '@/lib/supabase';
+import { mapTeam } from '@/lib/mappers';
 
 export default function TeamProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const team = TEAMS.find(t => t.id === id) ?? TEAMS[0];
+  const [team, setTeam] = useState<Team | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const winRate = Math.round((team.wins / (team.wins + team.losses + team.draws)) * 100);
-  const totalGames = team.wins + team.losses + team.draws;
+  useEffect(() => {
+    supabase.from('cl_teams').select('*').eq('id', id).single().then(({ data }) => {
+      if (data) setTeam(mapTeam(data));
+      setLoading(false);
+    });
+  }, [id]);
 
-  const handleChallenge = () => {
-    router.push(`/challenge/new?teamId=${team.id}` as any);
-  };
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator color={Colors.primary} style={{ flex: 1 }} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!team) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.empty}>
+          <Text style={styles.emptyIcon}>🔍</Text>
+          <Text style={styles.emptyTitle}>Equipo no encontrado</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const total = team.wins + team.losses + team.draws;
+  const winRate = total > 0 ? Math.round((team.wins / total) * 100) : 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -34,7 +59,7 @@ export default function TeamProfileScreen() {
           </View>
           <View style={styles.ratingRow}>
             <Text style={styles.ratingText}>⭐ {team.rating.toFixed(1)}</Text>
-            <Text style={styles.ratingCount}>({totalGames} partidos)</Text>
+            <Text style={styles.ratingCount}>({total} partidos)</Text>
           </View>
         </View>
 
@@ -45,58 +70,38 @@ export default function TeamProfileScreen() {
           <StatBox label="Win Rate" value={`${winRate}%`} color={Colors.blue} icon="📊" />
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sobre el equipo</Text>
-          <Text style={styles.description}>{team.description}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Disponibilidad</Text>
-          <View style={styles.daysRow}>
-            {team.availableDays.map(day => (
-              <View key={day} style={styles.dayChip}>
-                <Text style={styles.dayText}>{day}</Text>
-              </View>
-            ))}
+        {team.description ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Sobre el equipo</Text>
+            <Text style={styles.description}>{team.description}</Text>
           </View>
-        </View>
+        ) : null}
+
+        {(team.availableDays ?? []).length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Disponibilidad</Text>
+            <View style={styles.daysRow}>
+              {(team.availableDays ?? []).map(day => (
+                <View key={day} style={styles.dayChip}>
+                  <Text style={styles.dayText}>{day}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Integrantes</Text>
+          <Text style={styles.sectionTitle}>Integrantes ({team.members})</Text>
           <View style={styles.membersRow}>
-            {Array.from({ length: team.members }).map((_, i) => (
+            {Array.from({ length: Math.min(team.members, 10) }).map((_, i) => (
               <View key={i} style={styles.memberDot}>
-                <Text style={styles.memberEmoji}>
-                  {['👤', '👤', '👤', '👤', '👤', '👤', '👤', '👤', '👤', '👤', '👤', '👤', '👤', '👤', '👤', '👤'][i]}
-                </Text>
+                <Text style={styles.memberEmoji}>👤</Text>
               </View>
             ))}
             <View style={styles.memberCount}>
               <Text style={styles.memberCountText}>{team.members}</Text>
             </View>
           </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Historial reciente</Text>
-          {[
-            { rival: 'Los Compadres', result: 'V', score: '4-2', date: 'Hace 1 sem' },
-            { rival: 'Barrio Norte United', result: 'V', score: '3-1', date: 'Hace 2 sem' },
-            { rival: 'Tigres del Sur', result: 'D', score: '2-4', date: 'Hace 3 sem' },
-          ].map((match, i) => (
-            <View key={i} style={styles.matchRow}>
-              <View style={[styles.resultBadge, {
-                backgroundColor: match.result === 'V' ? Colors.primaryMuted : Colors.dangerMuted,
-              }]}>
-                <Text style={[styles.resultText, {
-                  color: match.result === 'V' ? Colors.primary : Colors.danger,
-                }]}>{match.result}</Text>
-              </View>
-              <Text style={styles.matchRival}>vs {match.rival}</Text>
-              <Text style={styles.matchScore}>{match.score}</Text>
-              <Text style={styles.matchDate}>{match.date}</Text>
-            </View>
-          ))}
         </View>
 
         <View style={styles.actions}>
@@ -106,7 +111,10 @@ export default function TeamProfileScreen() {
           >
             <Text style={styles.chatBtnText}>💬 Enviar mensaje</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.challengeBtn} onPress={handleChallenge}>
+          <TouchableOpacity
+            style={styles.challengeBtn}
+            onPress={() => router.push(`/challenge/new?teamId=${team.id}` as any)}
+          >
             <Text style={styles.challengeBtnText}>⚡ Desafiar</Text>
           </TouchableOpacity>
         </View>
@@ -127,6 +135,9 @@ function StatBox({ label, value, color, icon }: { label: string; value: string |
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  emptyIcon: { fontSize: 48 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.text },
   hero: {
     alignItems: 'center',
     paddingTop: 32,
@@ -214,23 +225,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   memberCountText: { fontSize: 13, fontWeight: '700', color: Colors.primary },
-  matchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 4,
-  },
-  resultBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  resultText: { fontSize: 13, fontWeight: '800' },
-  matchRival: { flex: 1, fontSize: 14, color: Colors.text },
-  matchScore: { fontSize: 14, fontWeight: '700', color: Colors.textMuted },
-  matchDate: { fontSize: 12, color: Colors.textDim },
   actions: {
     flexDirection: 'row',
     gap: 12,

@@ -1,26 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
-  ScrollView, TouchableOpacity, Alert,
+  ScrollView, TouchableOpacity, Alert, ActivityIndicator,
 } from 'react-native';
 import { Colors } from '@/constants/Colors';
-import { CHALLENGES, Challenge } from '@/constants/MockData';
+import type { Challenge } from '@/constants/MockData';
 import { ChallengeCard } from '@/components/ChallengeCard';
+import { supabase } from '@/lib/supabase';
+import { mapTeam } from '@/lib/mappers';
+import { useMyTeam } from '@/hooks/useMyTeam';
 
 type Tab = 'incoming' | 'outgoing';
 
 export default function ChallengesScreen() {
+  const { teamId, userId } = useMyTeam();
   const [activeTab, setActiveTab] = useState<Tab>('incoming');
-  const [challenges, setChallenges] = useState(CHALLENGES);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchChallenges = useCallback(async () => {
+    if (!teamId) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('cl_challenges')
+      .select('*, from_team:cl_teams!from_team(*), to_team:cl_teams!to_team(*)')
+      .or(`from_team.eq.${teamId},to_team.eq.${teamId}`)
+      .order('created_at', { ascending: false });
+
+    const mapped: Challenge[] = (data ?? []).map((row: any) => {
+      const isIncoming = row.to_team?.id === teamId;
+      const otherTeamRaw = isIncoming ? row.from_team : row.to_team;
+      return {
+        id: row.id,
+        team: mapTeam(otherTeamRaw),
+        type: isIncoming ? 'incoming' : 'outgoing',
+        status: row.status,
+        proposedDate: row.proposed_date ?? '',
+        proposedTime: row.proposed_time ?? '',
+        message: row.message ?? '',
+        createdAt: row.created_at,
+      };
+    });
+    setChallenges(mapped);
+    setLoading(false);
+  }, [teamId]);
+
+  useEffect(() => { fetchChallenges(); }, [fetchChallenges]);
 
   const incoming = challenges.filter(c => c.type === 'incoming');
   const outgoing = challenges.filter(c => c.type === 'outgoing');
   const pendingCount = incoming.filter(c => c.status === 'pending').length;
 
-  const handleAccept = (id: string) => {
-    setChallenges(prev =>
-      prev.map(c => c.id === id ? { ...c, status: 'accepted' as const } : c)
-    );
+  const handleAccept = async (id: string) => {
+    await supabase.from('cl_challenges').update({ status: 'accepted' }).eq('id', id);
+    setChallenges(prev => prev.map(c => c.id === id ? { ...c, status: 'accepted' as const } : c));
   };
 
   const handleDecline = (id: string) => {
@@ -29,10 +62,10 @@ export default function ChallengesScreen() {
       {
         text: 'Rechazar',
         style: 'destructive',
-        onPress: () =>
-          setChallenges(prev =>
-            prev.map(c => c.id === id ? { ...c, status: 'declined' as const } : c)
-          ),
+        onPress: async () => {
+          await supabase.from('cl_challenges').update({ status: 'declined' }).eq('id', id);
+          setChallenges(prev => prev.map(c => c.id === id ? { ...c, status: 'declined' as const } : c));
+        },
       },
     ]);
   };
@@ -72,34 +105,38 @@ export default function ChallengesScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.list}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {displayed.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>{activeTab === 'incoming' ? '📭' : '📬'}</Text>
-            <Text style={styles.emptyTitle}>
-              {activeTab === 'incoming' ? 'Sin desafíos recibidos' : 'No enviaste desafíos aún'}
-            </Text>
-            <Text style={styles.emptyText}>
-              {activeTab === 'incoming'
-                ? 'Cuando otros equipos te desafíen, aparecerán acá'
-                : 'Buscá equipos y mandá tu primer desafío'}
-            </Text>
-          </View>
-        ) : (
-          displayed.map(challenge => (
-            <ChallengeCard
-              key={challenge.id}
-              challenge={challenge}
-              onAccept={() => handleAccept(challenge.id)}
-              onDecline={() => handleDecline(challenge.id)}
-            />
-          ))
-        )}
-      </ScrollView>
+      {loading ? (
+        <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+      ) : (
+        <ScrollView
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {displayed.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyIcon}>{activeTab === 'incoming' ? '📭' : '📬'}</Text>
+              <Text style={styles.emptyTitle}>
+                {activeTab === 'incoming' ? 'Sin desafíos recibidos' : 'No enviaste desafíos aún'}
+              </Text>
+              <Text style={styles.emptyText}>
+                {activeTab === 'incoming'
+                  ? 'Cuando otros equipos te desafíen, aparecerán acá'
+                  : 'Buscá equipos y mandá tu primer desafío'}
+              </Text>
+            </View>
+          ) : (
+            displayed.map(challenge => (
+              <ChallengeCard
+                key={challenge.id}
+                challenge={challenge}
+                onAccept={() => handleAccept(challenge.id)}
+                onDecline={() => handleDecline(challenge.id)}
+              />
+            ))
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

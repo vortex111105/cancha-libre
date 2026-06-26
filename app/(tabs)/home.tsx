@@ -1,28 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
-  ScrollView, TouchableOpacity, TextInput,
+  ScrollView, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
-import { TEAMS, MY_TEAM, Sport } from '@/constants/MockData';
+import type { Sport, Team } from '@/constants/MockData';
 import { TeamCard } from '@/components/TeamCard';
+import { supabase } from '@/lib/supabase';
+import { mapTeam } from '@/lib/mappers';
+import { useMyTeam } from '@/hooks/useMyTeam';
 
-const SPORT_FILTERS: (Sport | 'Todos')[] = ['Todos', 'Fútbol 5', 'Fútbol 7', 'Fútbol 11'];
+const SPORT_FILTERS: (Sport | 'Todos')[] = ['Todos', 'Fútbol 5vs5', 'Fútbol 7vs7', 'Fútbol 8vs8', 'Fútbol 11vs11', 'Básquet 3x3', 'Básquet 5x5', 'Pádel Single (1vs1)', 'Pádel Parejas'];
 
 export default function HomeScreen() {
+  const { team: myTeam, userId } = useMyTeam();
   const [sportFilter, setSportFilter] = useState<Sport | 'Todos'>('Todos');
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(true);
 
-  const filtered = TEAMS.filter(t => sportFilter === 'Todos' || t.sport === sportFilter);
+  const fetchTeams = useCallback(async () => {
+    setLoadingTeams(true);
+    let query = supabase.from('cl_teams').select('*').order('created_at', { ascending: false });
+    if (userId) query = query.neq('user_id', userId);
+    const { data } = await query;
+    setTeams((data ?? []).map(mapTeam));
+    setLoadingTeams(false);
+  }, [userId]);
+
+  useEffect(() => { fetchTeams(); }, [fetchTeams]);
+
+  const filtered = teams.filter(t => sportFilter === 'Todos' || t.sport === sportFilter);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.topBar}>
           <View>
-            <Text style={styles.greeting}>Hola, {MY_TEAM.name} 👋</Text>
-            <Text style={styles.location}>📍 {MY_TEAM.neighborhood}, {MY_TEAM.city}</Text>
+            <Text style={styles.greeting}>
+              Hola, {myTeam?.name ?? 'equipo'} 👋
+            </Text>
+            <Text style={styles.location}>
+              📍 {myTeam ? `${myTeam.neighborhood}, ${myTeam.city}` : 'Buenos Aires'}
+            </Text>
           </View>
           <TouchableOpacity style={styles.notifBtn}>
             <Text style={styles.notifIcon}>🔔</Text>
@@ -33,7 +54,7 @@ export default function HomeScreen() {
         <View style={styles.heroCard}>
           <View style={styles.heroContent}>
             <Text style={styles.heroTitle}>Encontrá{'\n'}tu próximo rival</Text>
-            <Text style={styles.heroSub}>{TEAMS.length} equipos cerca de vos</Text>
+            <Text style={styles.heroSub}>{teams.length} equipos cerca de vos</Text>
             <TouchableOpacity
               style={styles.heroBtn}
               onPress={() => router.push('/(tabs)/search')}
@@ -45,9 +66,9 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.quickStats}>
-          <QuickStat label="Desafíos\npendientes" value="2" color={Colors.accent} />
-          <QuickStat label="Mensajes\nnuevos" value="3" color={Colors.blue} />
-          <QuickStat label="Próximo\npartido" value="Sáb" color={Colors.primary} />
+          <QuickStat label="Equipos\ncerca" value={teams.length.toString()} color={Colors.primary} />
+          <QuickStat label="Deporte\nfavorito" value={myTeam?.sport?.split(' ')[0] ?? '—'} color={Colors.blue} />
+          <QuickStat label="Nivel\nactual" value={myTeam?.level?.slice(0, 3) ?? '—'} color={Colors.accent} />
         </View>
 
         <View style={styles.sectionHeader}>
@@ -89,6 +110,14 @@ export default function HomeScreen() {
 
         {viewMode === 'map' ? (
           <MapPlaceholder count={filtered.length} />
+        ) : loadingTeams ? (
+          <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+        ) : filtered.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyIcon}>🔍</Text>
+            <Text style={styles.emptyTitle}>Sin equipos por ahora</Text>
+            <Text style={styles.emptyText}>Cuando otros equipos se registren, aparecerán acá</Text>
+          </View>
         ) : (
           <View style={styles.teamList}>
             {filtered.map(team => (
@@ -207,10 +236,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
   },
-  quickStatValue: {
-    fontSize: 22,
-    fontWeight: '800',
-  },
+  quickStatValue: { fontSize: 22, fontWeight: '800' },
   quickStatLabel: {
     fontSize: 10,
     color: Colors.textDim,
@@ -259,6 +285,10 @@ const styles = StyleSheet.create({
   filterChipText: { fontSize: 13, color: Colors.textMuted, fontWeight: '600' },
   filterChipTextActive: { color: Colors.primary },
   teamList: { paddingHorizontal: 20, paddingBottom: 24 },
+  empty: { alignItems: 'center', paddingTop: 60, gap: 12, paddingHorizontal: 40 },
+  emptyIcon: { fontSize: 48 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.text },
+  emptyText: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 20 },
   mapPlaceholder: {
     margin: 20,
     borderRadius: 20,

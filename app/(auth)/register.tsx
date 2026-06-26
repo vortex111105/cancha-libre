@@ -1,15 +1,35 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView,
+  StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView, Alert
 } from 'react-native';
 import { router } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handleRegister() {
+    if (!email || !password || !name) return Alert.alert('Error', 'Completá todos los campos');
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name } }
+    });
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('Error de registro', error.message);
+    } else {
+      // Redirige a crear equipo si el registro fue exitoso
+      router.push('/(auth)/create-team');
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -65,10 +85,13 @@ export default function RegisterScreen() {
             </View>
 
             <TouchableOpacity
-              style={styles.primaryBtn}
-              onPress={() => router.push('/(auth)/create-team')}
+              style={[styles.primaryBtn, loading && { opacity: 0.7 }]}
+              onPress={handleRegister}
+              disabled={loading}
             >
-              <Text style={styles.primaryBtnText}>Continuar →</Text>
+              <Text style={styles.primaryBtnText}>
+                {loading ? 'Cargando...' : 'Continuar →'}
+              </Text>
             </TouchableOpacity>
 
             <Text style={styles.terms}>

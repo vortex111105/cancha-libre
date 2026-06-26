@@ -1,14 +1,32 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView,
+  StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView, Alert
 } from 'react-native';
 import { router } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handleLogin() {
+    if (!email || !password) return Alert.alert('Error', 'Completá todos los campos');
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('Error de inicio de sesión', error.message);
+    } else {
+      router.replace('/(tabs)/home');
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -19,7 +37,7 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.hero}>
             <Text style={styles.ball}>⚽</Text>
-            <Text style={styles.appName}>MatchFut</Text>
+            <Text style={styles.appName}>Cancha Libre</Text>
             <Text style={styles.tagline}>Encontrá rivales. Jugá más.</Text>
           </View>
 
@@ -56,10 +74,13 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.primaryBtn}
-              onPress={() => router.replace('/(tabs)/home')}
+              style={[styles.primaryBtn, loading && { opacity: 0.7 }]}
+              onPress={handleLogin}
+              disabled={loading}
             >
-              <Text style={styles.primaryBtnText}>Entrar</Text>
+              <Text style={styles.primaryBtnText}>
+                {loading ? 'Cargando...' : 'Entrar'}
+              </Text>
             </TouchableOpacity>
 
             <View style={styles.dividerRow}>

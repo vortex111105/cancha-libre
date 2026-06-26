@@ -1,22 +1,53 @@
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity,
+  View, Text, StyleSheet, SafeAreaView, FlatList,
+  TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
-import { CONVERSATIONS } from '@/constants/MockData';
+import { supabase } from '@/lib/supabase';
+import { mapTeam } from '@/lib/mappers';
+import { useMyTeam } from '@/hooks/useMyTeam';
+import type { ChatConversation } from '@/constants/MockData';
 import { ChatItem } from '@/components/ChatItem';
 
 export default function ChatListScreen() {
-  const totalUnread = CONVERSATIONS.reduce((sum, c) => sum + c.unread, 0);
+  const { teamId } = useMyTeam();
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchConversations = useCallback(async () => {
+    if (!teamId) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('cl_conversations')
+      .select('id, team1_id, team2_id, created_at, team1:cl_teams!team1_id(*), team2:cl_teams!team2_id(*)')
+      .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
+      .order('created_at', { ascending: false });
+
+    const mapped: ChatConversation[] = (data ?? []).map((row: any) => {
+      const otherTeamRaw = row.team1_id === teamId ? row.team2 : row.team1;
+      return {
+        id: row.id,
+        team: mapTeam(otherTeamRaw),
+        lastMessage: 'Tocá para ver la conversación',
+        lastMessageTime: new Date(row.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+        unread: 0,
+      };
+    });
+    setConversations(mapped);
+    setLoading(false);
+  }, [teamId]);
+
+  useEffect(() => { fetchConversations(); }, [fetchConversations]);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Mensajes</Text>
-          {totalUnread > 0 && (
-            <Text style={styles.subtitle}>{totalUnread} mensaje{totalUnread > 1 ? 's' : ''} sin leer</Text>
+          {conversations.length > 0 && (
+            <Text style={styles.subtitle}>{conversations.length} conversación{conversations.length > 1 ? 'es' : ''}</Text>
           )}
         </View>
         <TouchableOpacity style={styles.composeBtn}>
@@ -24,7 +55,9 @@ export default function ChatListScreen() {
         </TouchableOpacity>
       </View>
 
-      {CONVERSATIONS.length === 0 ? (
+      {loading ? (
+        <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+      ) : conversations.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>💬</Text>
           <Text style={styles.emptyTitle}>Sin conversaciones</Text>
@@ -34,7 +67,7 @@ export default function ChatListScreen() {
         </View>
       ) : (
         <FlatList
-          data={CONVERSATIONS}
+          data={conversations}
           keyExtractor={item => item.id}
           renderItem={({ item }) => (
             <ChatItem
