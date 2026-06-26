@@ -21,3 +21,17 @@ export function mapTeam(row: Record<string, any>): Team {
     inviteCode: row.invite_code,
   };
 }
+
+export function mapUser(row: Record<string, any>): import('@/constants/MockData').User {
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name ?? 'Jugador',
+    avatar: row.avatar ?? '🏃',
+    sportPreference: row.sport_preference ?? '',
+    position: row.position ?? '',
+    lookingForTeam: row.looking_for_team ?? false,
+    bio: row.bio ?? '',
+    teamId: row.team_id,
+  };
+}

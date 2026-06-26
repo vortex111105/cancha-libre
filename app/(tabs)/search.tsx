@@ -16,24 +16,33 @@ const DISTANCES = ['Todos', '< 2km', '< 5km', '< 10km'];
 
 export default function SearchScreen() {
   const [query, setQuery] = useState('');
+  const [searchMode, setSearchMode] = useState<'teams' | 'players'>('teams');
   const [sport, setSport] = useState<Sport | 'Todos'>('Todos');
   const [level, setLevel] = useState<Level | 'Todos'>('Todos');
   const [distance, setDistance] = useState('Todos');
   const [showFilters, setShowFilters] = useState(false);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [users, setUsers] = useState<any[]>([]); // Using any for now or User type if imported
   const [loading, setLoading] = useState(true);
 
   React.useEffect(() => {
-    async function fetchTeams() {
+    async function fetchData() {
       setLoading(true);
-      const { data } = await supabase.from('cl_teams').select('*');
-      setTeams((data ?? []).map(mapTeam));
+      const [teamsRes, usersRes] = await Promise.all([
+        supabase.from('cl_teams').select('*'),
+        supabase.from('cl_users').select('*').eq('looking_for_team', true)
+      ]);
+      setTeams((teamsRes.data ?? []).map(mapTeam));
+      setUsers((usersRes.data ?? []).map(row => ({
+        id: row.id, name: row.name || 'Jugador', avatar: row.avatar || '🏃',
+        sportPreference: row.sport_preference || '', position: row.position || '', bio: row.bio || ''
+      })));
       setLoading(false);
     }
-    fetchTeams();
+    fetchData();
   }, []);
 
-  const filtered = teams.filter(t => {
+  const filteredTeams = teams.filter(t => {
     const matchName = t.name.toLowerCase().includes(query.toLowerCase()) ||
       t.neighborhood.toLowerCase().includes(query.toLowerCase());
     const matchSport = sport === 'Todos' || t.sport === sport;
@@ -46,13 +55,20 @@ export default function SearchScreen() {
     return matchName && matchSport && matchLevel && matchDist;
   });
 
+  const filteredUsers = users.filter(u => {
+    const matchName = u.name.toLowerCase().includes(query.toLowerCase()) || u.sportPreference.toLowerCase().includes(query.toLowerCase()) || u.position.toLowerCase().includes(query.toLowerCase());
+    return matchName;
+  });
+
+  const currentResults = searchMode === 'teams' ? filteredTeams : filteredUsers;
+
   const activeFilters = [sport, level, distance].filter(f => f !== 'Todos').length;
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Buscar equipos</Text>
-        <Text style={styles.subtitle}>{filtered.length} equipos disponibles</Text>
+        <Text style={styles.title}>Buscar {searchMode === 'teams' ? 'equipos' : 'jugadores'}</Text>
+        <Text style={styles.subtitle}>{currentResults.length} resultados disponibles</Text>
       </View>
 
       <View style={styles.searchRow}>
@@ -113,6 +129,15 @@ export default function SearchScreen() {
         </View>
       )}
 
+      <View style={{flexDirection: 'row', paddingHorizontal: 20, marginBottom: 16, gap: 10}}>
+        <TouchableOpacity style={[styles.tab, searchMode === 'teams' && styles.tabActive]} onPress={() => setSearchMode('teams')}>
+          <Text style={[styles.tabText, searchMode === 'teams' && styles.tabTextActive]}>Equipos</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.tab, searchMode === 'players' && styles.tabActive]} onPress={() => setSearchMode('players')}>
+          <Text style={[styles.tabText, searchMode === 'players' && styles.tabTextActive]}>Agentes Libres</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.list}
         contentContainerStyle={styles.listContent}
@@ -120,21 +145,39 @@ export default function SearchScreen() {
       >
         {loading ? (
           <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
-        ) : filtered.length === 0 ? (
+        ) : currentResults.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>🤷‍♂️</Text>
             <Text style={styles.emptyTitle}>No hay resultados</Text>
-            <Text style={styles.emptyText}>Probá cambiando los filtros o buscando otro nombre</Text>
+            <Text style={styles.emptyText}>Probá cambiando los filtros o buscando otra cosa</Text>
           </View>
         ) : (
-          filtered.map(team => (
-            <TeamCard
-              key={team.id}
-              team={team}
-              onPress={() => router.push(`/team/${team.id}` as any)}
-              onChallenge={() => router.push(`/challenge/new?teamId=${team.id}` as any)}
-            />
-          ))
+          searchMode === 'teams' 
+            ? filteredTeams.map(team => (
+                <TeamCard
+                  key={team.id}
+                  team={team}
+                  onPress={() => router.push(`/team/${team.id}` as any)}
+                  onChallenge={() => router.push(`/challenge/new?teamId=${team.id}` as any)}
+                />
+              ))
+            : filteredUsers.map(user => (
+                <View key={user.id} style={styles.playerCard}>
+                  <View style={{flexDirection: 'row', alignItems: 'center', gap: 16}}>
+                    <View style={{width: 50, height: 50, borderRadius: 25, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border}}>
+                      <Text style={{fontSize: 24}}>{user.avatar}</Text>
+                    </View>
+                    <View style={{flex: 1}}>
+                      <Text style={{fontSize: 18, fontWeight: '700', color: Colors.text}}>{user.name}</Text>
+                      <Text style={{fontSize: 13, color: Colors.primary, fontWeight: '600'}}>{user.position} • {user.sportPreference}</Text>
+                    </View>
+                  </View>
+                  {user.bio ? <Text style={{color: Colors.textMuted, fontSize: 13, marginTop: 12, lineHeight: 18}}>{user.bio}</Text> : null}
+                  <TouchableOpacity style={styles.contactBtn} onPress={() => require('react-native').Alert.alert('Contactar', 'Esta función enviará un mensaje directo al jugador. (Próximamente)')}>
+                    <Text style={styles.contactBtnText}>Contactar</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
         )}
       </ScrollView>
     </SafeAreaView>
@@ -251,4 +294,11 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 48 },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.text },
   emptyText: { fontSize: 14, color: Colors.textMuted, textAlign: 'center' },
+  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: Colors.surface, borderRadius: 10, borderWidth: 1, borderColor: Colors.border },
+  tabActive: { backgroundColor: Colors.primaryMuted, borderColor: Colors.primary },
+  tabText: { color: Colors.text, fontWeight: '600', fontSize: 14 },
+  tabTextActive: { color: Colors.primary },
+  playerCard: { backgroundColor: Colors.card, padding: 16, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: Colors.border },
+  contactBtn: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, padding: 12, alignItems: 'center', marginTop: 16 },
+  contactBtnText: { color: Colors.text, fontWeight: '600', fontSize: 14 },
 });

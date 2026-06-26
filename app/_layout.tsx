@@ -67,6 +67,14 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="profile/edit-player"
+          options={{
+            title: 'Editar perfil',
+            headerBackTitle: 'Volver',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
           name="chat/[id]"
           options={{
             title: 'Chat',

@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
-  ScrollView, TouchableOpacity, Alert, ActivityIndicator,
+  ScrollView, TouchableOpacity, Alert, ActivityIndicator, Switch
 } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { LevelBadge, SportBadge } from '@/components/Badge';
@@ -19,22 +19,58 @@ export default function ProfileScreen() {
     );
   }
 
+  async function handleToggleLooking(value: boolean) {
+    if (!userProfile) return;
+    try {
+      await supabase.from('cl_users').update({ looking_for_team: value }).eq('id', userProfile.id);
+      require('expo-router').router.replace('/(tabs)/profile'); // fast refresh hack or better, refetch
+      refetch();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   if (!team) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>🏃</Text>
-          <Text style={styles.emptyTitle}>¡Aún no tenés equipo!</Text>
-          <Text style={{color: Colors.textMuted, textAlign: 'center', marginBottom: 20, paddingHorizontal: 40}}>Para ver tu perfil y estadísticas, unite a un equipo o creá el tuyo.</Text>
-          <View style={{flexDirection: 'row', gap: 12, paddingHorizontal: 40, width: '100%'}}>
-            <TouchableOpacity style={{flex: 1, backgroundColor: Colors.primary, paddingVertical: 14, borderRadius: 12, alignItems: 'center'}} onPress={() => require('expo-router').router.push('/(auth)/create-team')}>
-              <Text style={{fontSize: 14, fontWeight: '700', color: '#000'}}>Crear equipo</Text>
+        <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 60 }}>
+          <View style={{alignItems: 'center', marginBottom: 32}}>
+            <View style={{width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.card, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: Colors.border, marginBottom: 12}}>
+              <Text style={{fontSize: 40}}>{userProfile?.avatar || '🏃'}</Text>
+            </View>
+            <Text style={{fontSize: 22, fontWeight: '800', color: Colors.text}}>{userProfile?.name || 'Jugador'}</Text>
+            {userProfile?.position ? (
+              <Text style={{color: Colors.primary, fontWeight: '600', marginTop: 4}}>{userProfile.position} • {userProfile.sportPreference}</Text>
+            ) : null}
+          </View>
+
+          <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: Colors.card, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: Colors.primary, marginBottom: 16}}>
+            <View style={{flex: 1, paddingRight: 16}}>
+              <Text style={{color: Colors.text, fontSize: 16, fontWeight: '700', marginBottom: 4}}>Buscando equipo 🔥</Text>
+              <Text style={{color: Colors.textMuted, fontSize: 13, lineHeight: 18}}>Aparecerás en el buscador de agentes libres para que los capitanes te contacten.</Text>
+            </View>
+            <Switch value={userProfile?.lookingForTeam || false} onValueChange={handleToggleLooking} trackColor={{true: Colors.primary}} />
+          </View>
+
+          <TouchableOpacity style={{backgroundColor: Colors.surface, padding: 16, borderRadius: 14, alignItems: 'center', borderWidth: 1, borderColor: Colors.border, marginBottom: 32}} onPress={() => require('expo-router').router.push('/profile/edit-player' as any)}>
+            <Text style={{color: Colors.text, fontWeight: '600', fontSize: 15}}>✏️ Editar mi perfil de jugador</Text>
+          </TouchableOpacity>
+
+          <Text style={{color: Colors.textMuted, fontSize: 14, fontWeight: '600', marginBottom: 12, textAlign: 'center'}}>O si querés formar parte de un plantel:</Text>
+          
+          <View style={{flexDirection: 'row', gap: 12}}>
+            <TouchableOpacity style={{flex: 1, backgroundColor: Colors.primary, paddingVertical: 16, borderRadius: 14, alignItems: 'center'}} onPress={() => require('expo-router').router.push('/(auth)/create-team')}>
+              <Text style={{fontSize: 15, fontWeight: '700', color: '#000'}}>Crear equipo</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={{flex: 1, backgroundColor: Colors.surface, paddingVertical: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: Colors.border}} onPress={() => require('expo-router').router.push('/team/join' as any)}>
-              <Text style={{fontSize: 14, fontWeight: '700', color: Colors.text}}>Unirme</Text>
+            <TouchableOpacity style={{flex: 1, backgroundColor: Colors.surface, paddingVertical: 16, borderRadius: 14, alignItems: 'center', borderWidth: 1, borderColor: Colors.border}} onPress={() => require('expo-router').router.push('/team/join' as any)}>
+              <Text style={{fontSize: 15, fontWeight: '700', color: Colors.text}}>Unirme con código</Text>
             </TouchableOpacity>
           </View>
-        </View>
+          
+          <TouchableOpacity style={{marginTop: 40, alignItems: 'center', padding: 16}} onPress={() => supabase.auth.signOut()}>
+            <Text style={{color: Colors.danger, fontWeight: '600'}}>Cerrar sesión</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </SafeAreaView>
     );
   }

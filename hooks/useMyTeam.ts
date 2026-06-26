@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { mapTeam } from '@/lib/mappers';
-import type { Team } from '@/constants/MockData';
+import { mapTeam, mapUser } from '@/lib/mappers';
+import type { Team, User } from '@/constants/MockData';
 
 type UseMyTeamResult = {
   team: Team | null;
+  userProfile: User | null;
   teamId: string | null;
   userId: string | null;
   loading: boolean;
@@ -13,6 +14,7 @@ type UseMyTeamResult = {
 };
 
 export function useMyTeam(): UseMyTeamResult {
+  const [userProfile, setUserProfile] = useState<User | null>(null);
   const [team, setTeam] = useState<Team | null>(null);
   const [teamId, setTeamId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -32,11 +34,15 @@ export function useMyTeam(): UseMyTeamResult {
 
       const { data: userRecord, error: userErr } = await supabase
         .from('cl_users')
-        .select('team_id')
+        .select('*')
         .eq('id', user.id)
         .maybeSingle();
 
       if (userErr) throw userErr;
+      if (userRecord) {
+        setUserProfile(mapUser(userRecord));
+      }
+
       if (!userRecord?.team_id) {
         setLoading(false);
         return;
@@ -61,5 +67,5 @@ export function useMyTeam(): UseMyTeamResult {
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  return { team, teamId, userId, loading, error, refetch: fetch };
+  return { team, userProfile, teamId, userId, loading, error, refetch: fetch };
 }

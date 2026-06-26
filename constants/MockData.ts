@@ -22,6 +22,18 @@ export interface Team {
   inviteCode?: string;
 }
 
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  avatar: string;
+  sportPreference: string;
+  position: string;
+  lookingForTeam: boolean;
+  bio: string;
+  teamId: string | null;
+}
+
 export interface Challenge {
   id: string;
   team: Team;
