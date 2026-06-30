@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { routeByRole } from '@/lib/auth';
 import { Colors } from '@/constants/Colors';
 
 export default function LoginScreen() {
@@ -15,17 +16,22 @@ export default function LoginScreen() {
   async function handleLogin() {
     if (!email || !password) return Alert.alert('Error', 'Completá todos los campos');
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
 
     if (error) {
       Alert.alert('Error de inicio de sesión', error.message);
-    } else {
-      router.replace('/(tabs)/home');
+    } else if (data.user) {
+      await routeByRole(data.user.id);
     }
+  }
+
+  function handleSocialLogin(provider: string) {
+    Alert.alert('Próximamente', `El acceso con ${provider} estará disponible en la próxima versión.`);
+  }
+
+  function handleForgotPassword() {
+    Alert.alert('Recuperar contraseña', 'Enviá un email a soporte@canchalib.re con tu dirección registrada y te enviamos el link de recuperación.');
   }
 
   return (
@@ -69,7 +75,7 @@ export default function LoginScreen() {
               />
             </View>
 
-            <TouchableOpacity style={styles.forgotBtn}>
+            <TouchableOpacity style={styles.forgotBtn} onPress={handleForgotPassword}>
               <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
             </TouchableOpacity>
 
@@ -89,10 +95,10 @@ export default function LoginScreen() {
               <View style={styles.dividerLine} />
             </View>
 
-            <TouchableOpacity style={styles.socialBtn}>
+            <TouchableOpacity style={styles.socialBtn} onPress={() => handleSocialLogin('Google')}>
               <Text style={styles.socialBtnText}>🌐  Continuar con Google</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialBtn}>
+            <TouchableOpacity style={styles.socialBtn} onPress={() => handleSocialLogin('Apple')}>
               <Text style={styles.socialBtnText}>🍎  Continuar con Apple</Text>
             </TouchableOpacity>
           </View>

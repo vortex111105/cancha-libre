@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
+import { routeByRole } from '@/lib/auth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 export default function RootLayout() {
@@ -19,19 +20,6 @@ export default function RootLayout() {
       });
     }
   }, [expoPushToken, ready]);
-
-  async function routeByRole(userId: string) {
-    const { data } = await supabase
-      .from('cl_users')
-      .select('role')
-      .eq('id', userId)
-      .single();
-    if (data?.role === 'cancha_owner') {
-      router.replace('/(cancha-portal)/dashboard');
-    } else {
-      router.replace('/(tabs)/home');
-    }
-  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
