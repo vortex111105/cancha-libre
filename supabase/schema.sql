@@ -51,6 +51,8 @@ create table if not exists cl_challenges (
   is_completed    boolean default false,
   rating_from_team integer,
   rating_to_team   integer,
+  score_from_team  integer,
+  score_to_team    integer,
   created_at      timestamptz default now()
 );
 

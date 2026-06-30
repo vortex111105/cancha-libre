@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
@@ -7,11 +7,17 @@ import { supabase } from '@/lib/supabase';
 export default function RateChallengeScreen() {
   const { challengeId, teamId, isIncoming } = useLocalSearchParams<{ challengeId: string, teamId: string, isIncoming: string }>();
   const [rating, setRating] = useState(0);
+  const [myScore, setMyScore] = useState('');
+  const [rivalScore, setRivalScore] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
     if (rating === 0) {
       Alert.alert('Error', 'Por favor, selecciona una calificación.');
+      return;
+    }
+    if (!myScore || !rivalScore) {
+      Alert.alert('Error', 'Por favor, ingresa los goles del partido.');
       return;
     }
 
@@ -41,8 +47,8 @@ export default function RateChallengeScreen() {
 
       // Update challenge
       const updateData = isIncoming === 'true' 
-        ? { is_completed: true, rating_to_team: rating }
-        : { is_completed: true, rating_from_team: rating };
+        ? { is_completed: true, rating_to_team: rating, score_to_team: parseInt(myScore), score_from_team: parseInt(rivalScore) }
+        : { is_completed: true, rating_from_team: rating, score_from_team: parseInt(myScore), score_to_team: parseInt(rivalScore) };
 
       const { error: challengeError } = await supabase
         .from('cl_challenges')
@@ -74,12 +80,37 @@ export default function RateChallengeScreen() {
           ))}
         </View>
 
+        <Text style={styles.subtitle}>Resultado del partido</Text>
+        <View style={styles.scoreContainer}>
+          <View style={styles.scoreInputWrapper}>
+            <Text style={styles.scoreLabel}>Mi Equipo</Text>
+            <TextInput
+              style={styles.scoreInput}
+              keyboardType="number-pad"
+              value={myScore}
+              onChangeText={setMyScore}
+              maxLength={2}
+            />
+          </View>
+          <Text style={styles.scoreDivider}>-</Text>
+          <View style={styles.scoreInputWrapper}>
+            <Text style={styles.scoreLabel}>Rival</Text>
+            <TextInput
+              style={styles.scoreInput}
+              keyboardType="number-pad"
+              value={rivalScore}
+              onChangeText={setRivalScore}
+              maxLength={2}
+            />
+          </View>
+        </View>
+
         <TouchableOpacity 
-          style={[styles.primaryBtn, (rating === 0 || loading) && { opacity: 0.7 }]} 
+          style={[styles.primaryBtn, (rating === 0 || !myScore || !rivalScore || loading) && { opacity: 0.7 }]} 
           onPress={handleSubmit}
-          disabled={rating === 0 || loading}
+          disabled={rating === 0 || !myScore || !rivalScore || loading}
         >
-          {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.primaryBtnText}>Enviar Calificación</Text>}
+          {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.primaryBtnText}>Enviar y Finalizar</Text>}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -94,6 +125,11 @@ const styles = StyleSheet.create({
   starsContainer: { flexDirection: 'row', gap: 12, marginBottom: 40 },
   star: { fontSize: 48, color: Colors.surface, textShadowColor: Colors.border, textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 1 },
   starSelected: { color: Colors.primary, textShadowColor: Colors.primaryMuted },
+  scoreContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 40 },
+  scoreInputWrapper: { alignItems: 'center', gap: 8 },
+  scoreLabel: { fontSize: 13, fontWeight: '600', color: Colors.textMuted },
+  scoreInput: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 12, width: 60, height: 60, textAlign: 'center', fontSize: 24, fontWeight: '800', color: Colors.text },
+  scoreDivider: { fontSize: 24, fontWeight: '800', color: Colors.textDim, marginTop: 24 },
   primaryBtn: { backgroundColor: Colors.primary, paddingVertical: 16, paddingHorizontal: 32, borderRadius: 14, width: '100%', alignItems: 'center' },
   primaryBtnText: { fontSize: 16, fontWeight: '700', color: '#000' },
 });

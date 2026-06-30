@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
-  ScrollView, TouchableOpacity, Alert, ActivityIndicator, Switch
+  ScrollView, TouchableOpacity, Alert, ActivityIndicator, Switch, Share
 } from 'react-native';
 import { router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
@@ -14,6 +14,44 @@ import type { User } from '@/constants/MockData';
 export default function ProfileScreen() {
   const { team, loading } = useMyTeam();
   const [userProfile, setUserProfile] = useState<User | null>(null);
+  const [matchHistory, setMatchHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!team) return;
+    const fetchHistory = async () => {
+      const { data } = await supabase
+        .from('cl_challenges')
+        .select('*, from_team:cl_teams!from_team(name), to_team:cl_teams!to_team(name)')
+        .eq('is_completed', true)
+        .or(`from_team.eq.${team.id},to_team.eq.${team.id}`)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (data) {
+        const history = data.map(match => {
+          // Si fuimos nosotros los retados, el rival es from_team
+          const isIncoming = match.to_team?.id === team.id || match.to_team === team.id;
+          const rivalName = isIncoming ? match.from_team?.name : match.to_team?.name;
+          const myScore = isIncoming ? match.score_to_team : match.score_from_team;
+          const rivalScore = isIncoming ? match.score_from_team : match.score_to_team;
+          
+          let result = 'E';
+          if (myScore > rivalScore) result = 'V';
+          else if (myScore < rivalScore) result = 'D';
+
+          return {
+            id: match.id,
+            rival: rivalName || 'Desconocido',
+            result,
+            score: myScore !== null && rivalScore !== null ? `${myScore}-${rivalScore}` : '?-?',
+            date: new Date(match.created_at).toLocaleDateString(),
+          };
+        });
+        setMatchHistory(history);
+      }
+    };
+    fetchHistory();
+  }, [team]);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -164,7 +202,18 @@ export default function ProfileScreen() {
                 <Text style={styles.memberEmoji}>👤</Text>
               </View>
             ))}
-            <TouchableOpacity style={styles.addMember}>
+            <TouchableOpacity 
+              style={styles.addMember}
+              onPress={() => {
+                if (team.inviteCode) {
+                  Share.share({
+                    message: `¡Únete a mi equipo en Cancha Libre!\nCódigo de invitación: ${team.inviteCode}\nO descargate la app.`,
+                  });
+                } else {
+                  Alert.alert('No hay código', 'Tu equipo no tiene un código de invitación activo.');
+                }
+              }}
+            >
               <Text style={styles.addMemberText}>+</Text>
             </TouchableOpacity>
           </View>
@@ -172,12 +221,9 @@ export default function ProfileScreen() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Historial reciente</Text>
-          {[
-            { rival: 'Los Cebollitas', result: 'V', score: '5-1', date: 'Hace 3 días' },
-            { rival: 'El Nido SC', result: 'E', score: '2-2', date: 'Hace 1 sem' },
-            { rival: 'Villa Crespo FC', result: 'V', score: '3-2', date: 'Hace 2 sem' },
-            { rival: 'Tigres del Sur', result: 'D', score: '1-3', date: 'Hace 3 sem' },
-          ].map((match, i) => (
+          {matchHistory.length === 0 ? (
+             <Text style={{color: Colors.textMuted, fontSize: 13}}>No hay partidos completados aún.</Text>
+          ) : matchHistory.map((match, i) => (
             <View key={i} style={styles.matchRow}>
               <View style={[styles.resultBadge, {
                 backgroundColor:
