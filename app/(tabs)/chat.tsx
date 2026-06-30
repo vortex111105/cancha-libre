@@ -14,13 +14,13 @@ import { ChatItem } from '@/components/ChatItem';
 type CanchaConv = { id: string; fieldName: string; createdAt: string };
 
 export default function ChatListScreen() {
-  const { teamId } = useMyTeam();
+  const { teamId, loading: teamLoading } = useMyTeam();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [canchaConvs, setCanchaConvs] = useState<CanchaConv[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchConversations = useCallback(async () => {
-    if (!teamId) return;
+    if (!teamId) { setLoading(false); return; }
     setLoading(true);
     const [teamsRes, canchaRes] = await Promise.all([
       supabase
@@ -59,6 +59,34 @@ export default function ChatListScreen() {
 
   useEffect(() => { fetchConversations(); }, [fetchConversations]);
 
+  if (teamLoading || loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Mensajes</Text>
+        </View>
+        <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!teamId) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Mensajes</Text>
+        </View>
+        <View style={styles.empty}>
+          <Text style={styles.emptyIcon}>💬</Text>
+          <Text style={styles.emptyTitle}>Necesitás un equipo</Text>
+          <Text style={styles.emptyText}>
+            Creá o unite a un equipo para poder chatear con rivales y canchas.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -73,9 +101,7 @@ export default function ChatListScreen() {
         </TouchableOpacity>
       </View>
 
-      {loading ? (
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
-      ) : conversations.length === 0 && canchaConvs.length === 0 ? (
+      {conversations.length === 0 && canchaConvs.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>💬</Text>
           <Text style={styles.emptyTitle}>Sin conversaciones</Text>

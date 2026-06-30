@@ -157,7 +157,8 @@ create policy "cl_messages_insert" on cl_messages
 -- Ejecutar estas sentencias en Supabase SQL Editor
 -- =============================================
 
--- Agregar rol a cl_users
+-- Agregar nombre y rol a cl_users
+alter table cl_users add column if not exists name text;
 alter table cl_users add column if not exists role text default 'player'
   check (role in ('player', 'cancha_owner'));
 

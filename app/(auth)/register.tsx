@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { routeByRole } from '@/lib/auth';
 import { Colors } from '@/constants/Colors';
 
 export default function RegisterScreen() {
@@ -14,20 +15,48 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
 
   async function handleRegister() {
-    if (!email || !password || !name) return Alert.alert('Error', 'Completá todos los campos');
+    if (!name.trim() || !email.trim() || !password) {
+      return Alert.alert('Error', 'Completá todos los campos');
+    }
+    if (password.length < 6) {
+      return Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+    }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: name } }
-    });
-    setLoading(false);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: { data: { full_name: name.trim() } },
+      });
+      if (error) throw error;
 
-    if (error) {
-      Alert.alert('Error de registro', error.message);
-    } else {
-      // Redirige al home directamente
-      router.replace('/(tabs)/home');
+      const userId = data.user?.id;
+      if (!userId) throw new Error('No se pudo crear la cuenta');
+
+      // Crear fila en cl_users con el nombre
+      const { error: insertErr } = await supabase.from('cl_users').upsert({
+        id: userId,
+        email: email.trim().toLowerCase(),
+        name: name.trim(),
+      }, { onConflict: 'id' });
+
+      // El upsert puede fallar si email confirmation está activo (no hay sesión aún)
+      // No bloqueamos el flujo por eso
+      if (insertErr) console.warn('cl_users upsert:', insertErr.message);
+
+      if (data.session) {
+        await routeByRole(userId);
+      } else {
+        Alert.alert(
+          'Verificá tu email',
+          'Te enviamos un link de confirmación. Volvé a iniciar sesión después de confirmar tu cuenta.',
+          [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
+        );
+      }
+    } catch (err: any) {
+      Alert.alert('Error al registrarse', err.message ?? 'Intentalo de nuevo');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -44,7 +73,7 @@ export default function RegisterScreen() {
 
           <View style={styles.header}>
             <Text style={styles.title}>Crear cuenta</Text>
-            <Text style={styles.subtitle}>Unísea la comunidad de fútbol amateur</Text>
+            <Text style={styles.subtitle}>Unite a la comunidad de fútbol amateur</Text>
           </View>
 
           <View style={styles.form}>
@@ -78,7 +107,7 @@ export default function RegisterScreen() {
                 style={styles.input}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Mínimo 8 caracteres"
+                placeholder="Mínimo 6 caracteres"
                 placeholderTextColor={Colors.textDim}
                 secureTextEntry
               />
@@ -90,7 +119,7 @@ export default function RegisterScreen() {
               disabled={loading}
             >
               <Text style={styles.primaryBtnText}>
-                {loading ? 'Cargando...' : 'Continuar →'}
+                {loading ? 'Creando cuenta...' : 'Continuar →'}
               </Text>
             </TouchableOpacity>
 

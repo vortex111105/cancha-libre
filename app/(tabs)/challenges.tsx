@@ -13,13 +13,13 @@ import { useMyTeam } from '@/hooks/useMyTeam';
 type Tab = 'incoming' | 'outgoing';
 
 export default function ChallengesScreen() {
-  const { teamId, userId } = useMyTeam();
+  const { teamId, userId, loading: teamLoading } = useMyTeam();
   const [activeTab, setActiveTab] = useState<Tab>('incoming');
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchChallenges = useCallback(async () => {
-    if (!teamId) return;
+    if (!teamId) { setLoading(false); return; }
     setLoading(true);
     const { data } = await supabase
       .from('cl_challenges')
@@ -72,6 +72,31 @@ export default function ChallengesScreen() {
   };
 
   const displayed = activeTab === 'incoming' ? incoming : outgoing;
+
+  if (teamLoading || loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator color={Colors.primary} style={{ flex: 1 }} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!teamId) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Desafíos</Text>
+        </View>
+        <View style={styles.empty}>
+          <Text style={styles.emptyIcon}>⚡</Text>
+          <Text style={styles.emptyTitle}>Necesitás un equipo</Text>
+          <Text style={styles.emptyText}>
+            Creá o unite a un equipo para poder enviar y recibir desafíos.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>

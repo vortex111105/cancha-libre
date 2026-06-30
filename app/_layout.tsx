@@ -30,10 +30,8 @@ export default function RootLayout() {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        routeByRole(session.user.id);
-      } else if (event === 'SIGNED_OUT') {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, _session) => {
+      if (event === 'SIGNED_OUT') {
         router.replace('/');
       }
     });

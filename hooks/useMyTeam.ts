@@ -8,6 +8,7 @@ type UseMyTeamResult = {
   userProfile: User | null;
   teamId: string | null;
   userId: string | null;
+  displayName: string;
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
@@ -18,6 +19,7 @@ export function useMyTeam(): UseMyTeamResult {
   const [team, setTeam] = useState<Team | null>(null);
   const [teamId, setTeamId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +34,10 @@ export function useMyTeam(): UseMyTeamResult {
       }
       setUserId(user.id);
 
+      // Nombre desde auth metadata (siempre disponible, sin necesitar columna name)
+      const metaName = (user.user_metadata?.full_name as string | undefined) ?? user.email?.split('@')[0] ?? '';
+      setDisplayName(metaName.split(' ')[0] || 'Jugador');
+
       const { data: userRecord, error: userErr } = await supabase
         .from('cl_users')
         .select('*')
@@ -40,6 +46,10 @@ export function useMyTeam(): UseMyTeamResult {
 
       if (userErr) throw userErr;
       if (userRecord) {
+        // Si cl_users.name existe, prefiere ese; si no, usa auth metadata
+        if (userRecord.name) {
+          setDisplayName((userRecord.name as string).split(' ')[0]);
+        }
         setUserProfile(mapUser(userRecord));
       }
 
@@ -67,5 +77,5 @@ export function useMyTeam(): UseMyTeamResult {
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  return { team, userProfile, teamId, userId, loading, error, refetch: fetch };
+  return { team, userProfile, teamId, userId, displayName, loading, error, refetch: fetch };
 }

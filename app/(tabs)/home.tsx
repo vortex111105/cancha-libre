@@ -14,7 +14,7 @@ import { useMyTeam } from '@/hooks/useMyTeam';
 const SPORT_FILTERS: (Sport | 'Todos')[] = ['Todos', 'Fútbol 5vs5', 'Fútbol 7vs7', 'Fútbol 8vs8', 'Fútbol 11vs11', 'Básquet 3x3', 'Básquet 5x5', 'Pádel Single (1vs1)', 'Pádel Parejas'];
 
 export default function HomeScreen() {
-  const { team: myTeam, userId } = useMyTeam();
+  const { team: myTeam, userId, displayName } = useMyTeam();
   const [sportFilter, setSportFilter] = useState<Sport | 'Todos'>('Todos');
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [teams, setTeams] = useState<Team[]>([]);
@@ -39,7 +39,7 @@ export default function HomeScreen() {
         <View style={styles.topBar}>
           <View>
             <Text style={styles.greeting}>
-              Hola, {myTeam?.name ?? 'Jugador'} 👋
+              Hola, {displayName || 'Jugador'} 👋
             </Text>
             <Text style={styles.location}>
               📍 {myTeam ? `${myTeam.neighborhood}, ${myTeam.city}` : 'Buenos Aires'}
