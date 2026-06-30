@@ -35,7 +35,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Permite a Cancha Libre acceder a tu ubicación para encontrar rivales cerca."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true

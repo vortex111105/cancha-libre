@@ -33,6 +33,7 @@ create table if not exists cl_users (
   id         uuid references auth.users(id) on delete cascade primary key,
   email      text not null,
   team_id    uuid references cl_teams(id) on delete set null,
+  push_token text,
   created_at timestamptz default now()
 );
 

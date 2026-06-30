@@ -4,9 +4,21 @@ import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
+  const { expoPushToken } = usePushNotifications();
+
+  useEffect(() => {
+    if (expoPushToken?.data) {
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (session?.user) {
+          await supabase.from('cl_users').update({ push_token: expoPushToken.data }).eq('id', session.user.id);
+        }
+      });
+    }
+  }, [expoPushToken, ready]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -18,7 +30,7 @@ export default function RootLayout() {
       setReady(true);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         router.replace('/(tabs)/home');
       } else if (event === 'SIGNED_OUT') {
