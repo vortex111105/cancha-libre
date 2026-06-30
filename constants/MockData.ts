@@ -20,6 +20,8 @@ export interface Team {
   availableDays: string[];
   rating: number;
   inviteCode?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface User {

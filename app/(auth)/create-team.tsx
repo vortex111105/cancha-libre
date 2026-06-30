@@ -4,6 +4,7 @@ import {
   StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
+import * as Location from 'expo-location';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 
@@ -37,6 +38,19 @@ export default function CreateTeamScreen() {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('No hay sesión activa');
 
+      let lat = null;
+      let lng = null;
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        try {
+          const loc = await Location.getCurrentPositionAsync({});
+          lat = loc.coords.latitude;
+          lng = loc.coords.longitude;
+        } catch (e) {
+          console.log('Error getting location:', e);
+        }
+      }
+
       const { data: team, error: teamError } = await supabase
         .from('cl_teams')
         .insert({
@@ -50,6 +64,8 @@ export default function CreateTeamScreen() {
           description: description.trim() || null,
           available_days: selectedDays,
           color: '#4ADE80',
+          lat,
+          lng,
         })
         .select()
         .single();

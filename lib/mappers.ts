@@ -19,6 +19,8 @@ export function mapTeam(row: Record<string, any>): Team {
     description: row.description ?? '',
     color: row.color ?? '#4ADE80',
     inviteCode: row.invite_code,
+    lat: row.lat,
+    lng: row.lng,
   };
 }
 

@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { Level, Sport, Team } from '@/constants/MockData';
 import { TeamCard } from '@/components/TeamCard';
+import { MapContainer } from '@/components/MapContainer';
 import { supabase } from '@/lib/supabase';
 import { mapTeam } from '@/lib/mappers';
 
@@ -17,6 +18,7 @@ const DISTANCES = ['Todos', '< 2km', '< 5km', '< 10km'];
 export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [searchMode, setSearchMode] = useState<'teams' | 'players'>('teams');
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [sport, setSport] = useState<Sport | 'Todos'>('Todos');
   const [level, setLevel] = useState<Level | 'Todos'>('Todos');
   const [distance, setDistance] = useState('Todos');
@@ -138,6 +140,17 @@ export default function SearchScreen() {
         </TouchableOpacity>
       </View>
 
+      {searchMode === 'teams' && (
+        <View style={{flexDirection: 'row', paddingHorizontal: 20, marginBottom: 8, justifyContent: 'flex-end'}}>
+          <TouchableOpacity onPress={() => setViewMode(viewMode === 'list' ? 'map' : 'list')} style={styles.viewToggleBtn}>
+            <Text style={styles.viewToggleText}>{viewMode === 'list' ? '🗺️ Ver en Mapa' : '📄 Ver Lista'}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {searchMode === 'teams' && viewMode === 'map' && !loading && currentResults.length > 0 ? (
+        <MapContainer teams={filteredTeams} onTeamPress={(team) => router.push(`/team/${team.id}` as any)} />
+      ) : (
       <ScrollView
         style={styles.list}
         contentContainerStyle={styles.listContent}
@@ -180,6 +193,7 @@ export default function SearchScreen() {
               ))
         )}
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -301,4 +315,6 @@ const styles = StyleSheet.create({
   playerCard: { backgroundColor: Colors.card, padding: 16, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: Colors.border },
   contactBtn: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, padding: 12, alignItems: 'center', marginTop: 16 },
   contactBtnText: { color: Colors.text, fontWeight: '600', fontSize: 14 },
+  viewToggleBtn: { backgroundColor: Colors.surface, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: Colors.border },
+  viewToggleText: { fontSize: 13, fontWeight: '600', color: Colors.text },
 });

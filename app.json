@@ -8,7 +8,10 @@
     "userInterfaceStyle": "dark",
     "scheme": "canchalibre",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Esta aplicación necesita tu ubicación para mostrar equipos y canchas cercanas a ti."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -26,7 +29,13 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Permite a Cancha Libre acceder a tu ubicación para encontrar rivales cerca."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
