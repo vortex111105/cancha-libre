@@ -20,19 +20,32 @@ export default function RootLayout() {
     }
   }, [expoPushToken, ready]);
 
+  async function routeByRole(userId: string) {
+    const { data } = await supabase
+      .from('cl_users')
+      .select('role')
+      .eq('id', userId)
+      .single();
+    if (data?.role === 'cancha_owner') {
+      router.replace('/(cancha-portal)/dashboard');
+    } else {
+      router.replace('/(tabs)/home');
+    }
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        router.replace('/(tabs)/home');
+        routeByRole(session.user.id).finally(() => setReady(true));
       } else {
         router.replace('/(auth)/login');
+        setReady(true);
       }
-      setReady(true);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        router.replace('/(tabs)/home');
+        routeByRole(session.user.id);
       } else if (event === 'SIGNED_OUT') {
         router.replace('/(auth)/login');
       }
@@ -62,6 +75,8 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(cancha-onboarding)" options={{ headerShown: false }} />
+        <Stack.Screen name="(cancha-portal)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="team/[id]"
@@ -107,6 +122,13 @@ export default function RootLayout() {
             title: 'Calificar partido',
             headerBackTitle: 'Volver',
             presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="cancha-chat/[id]"
+          options={{
+            title: 'Consulta con la cancha',
+            headerBackTitle: 'Volver',
           }}
         />
       </Stack>

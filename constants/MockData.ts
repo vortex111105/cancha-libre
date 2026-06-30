@@ -25,6 +25,31 @@ export interface Team {
   lng?: number;
 }
 
+export interface Field {
+  id: string;
+  name: string;
+  address: string;
+  sports: Sport[];
+  price: number;
+  lat?: number;
+  lng?: number;
+  rating: number;
+  available: boolean;
+  description?: string;
+  photos?: string[];
+  ownerId?: string;
+}
+
+export interface FieldSlot {
+  id: string;
+  fieldId: string;
+  dayOfWeek: number; // 0=Dom, 1=Lun ... 6=Sab
+  startTime: string; // "HH:MM"
+  endTime: string;
+  price?: number;
+  isBooked: boolean;
+}
+
 export interface User {
   id: string;
   email: string;

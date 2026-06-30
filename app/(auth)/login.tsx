@@ -103,6 +103,13 @@ export default function LoginScreen() {
               <Text style={styles.footerLink}>Registrate</Text>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={styles.canchaLink}
+            onPress={() => router.push('/(cancha-onboarding)/register-cancha')}
+          >
+            <Text style={styles.canchaLinkText}>🏟️  Soy dueño de una cancha →</Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -202,4 +209,14 @@ const styles = StyleSheet.create({
   },
   footerText: { color: Colors.textMuted, fontSize: 14 },
   footerLink: { color: Colors.primary, fontWeight: '700', fontSize: 14 },
+  canchaLink: {
+    alignItems: 'center',
+    marginTop: 12,
+    paddingVertical: 10,
+  },
+  canchaLinkText: {
+    color: Colors.textMuted,
+    fontSize: 13,
+    fontWeight: '500',
+  },
 });

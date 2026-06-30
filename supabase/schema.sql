@@ -153,6 +153,106 @@ create policy "cl_messages_insert" on cl_messages
   );
 
 -- =============================================
+-- Fase 3 — Portal de Canchas (Etapa 1)
+-- Ejecutar estas sentencias en Supabase SQL Editor
+-- =============================================
+
+-- Agregar rol a cl_users
+alter table cl_users add column if not exists role text default 'player'
+  check (role in ('player', 'cancha_owner'));
+
+-- Agregar owner_id, description y photos a cl_fields
+alter table cl_fields add column if not exists owner_id uuid references cl_users(id);
+alter table cl_fields add column if not exists description text;
+alter table cl_fields add column if not exists photos text[] default '{}';
+
+-- RLS de cl_fields: el dueño puede insertar y actualizar su propia cancha
+create policy "cl_fields_insert" on cl_fields
+  for insert with check (auth.uid() = owner_id);
+
+create policy "cl_fields_update" on cl_fields
+  for update using (auth.uid() = owner_id);
+
+-- Disponibilidad horaria semanal por cancha
+create table if not exists cl_field_slots (
+  id           uuid primary key default gen_random_uuid(),
+  field_id     uuid references cl_fields(id) on delete cascade,
+  day_of_week  int  not null check (day_of_week between 0 and 6), -- 0=Dom, 1=Lun ... 6=Sab
+  start_time   time not null,
+  end_time     time not null,
+  price        numeric(10,2),
+  is_booked    boolean default false,
+  created_at   timestamptz default now()
+);
+
+alter table cl_field_slots enable row level security;
+
+-- Cualquiera puede ver la disponibilidad
+create policy "cl_field_slots_read" on cl_field_slots
+  for select using (true);
+
+-- Solo el dueño de la cancha puede gestionar sus slots
+create policy "cl_field_slots_write" on cl_field_slots
+  for all using (
+    field_id in (
+      select id from cl_fields where owner_id = auth.uid()
+    )
+  );
+
+-- =============================================
+-- Fase 3 — Portal de Canchas Etapa 2: Chat equipo ↔ cancha
+-- =============================================
+
+-- Conversaciones entre un equipo y una cancha
+create table if not exists cl_cancha_conversations (
+  id         uuid primary key default gen_random_uuid(),
+  team_id    uuid references cl_teams(id) on delete cascade,
+  field_id   uuid references cl_fields(id) on delete cascade,
+  created_at timestamptz default now(),
+  unique(team_id, field_id)
+);
+
+-- Mensajes de esas conversaciones
+create table if not exists cl_cancha_messages (
+  id              uuid primary key default gen_random_uuid(),
+  conversation_id uuid references cl_cancha_conversations(id) on delete cascade,
+  sender_type     text not null check (sender_type in ('team', 'cancha')),
+  sender_id       uuid not null,
+  text            text not null,
+  created_at      timestamptz default now()
+);
+
+alter table cl_cancha_conversations enable row level security;
+alter table cl_cancha_messages enable row level security;
+
+create policy "cl_cancha_conv_read" on cl_cancha_conversations
+  for select using (
+    team_id  in (select id from cl_teams  where user_id  = auth.uid()) or
+    field_id in (select id from cl_fields where owner_id = auth.uid())
+  );
+create policy "cl_cancha_conv_insert" on cl_cancha_conversations
+  for insert with check (
+    team_id in (select id from cl_teams where user_id = auth.uid())
+  );
+
+create policy "cl_cancha_msg_read" on cl_cancha_messages
+  for select using (
+    conversation_id in (
+      select id from cl_cancha_conversations
+      where team_id  in (select id from cl_teams  where user_id  = auth.uid())
+         or field_id in (select id from cl_fields where owner_id = auth.uid())
+    )
+  );
+create policy "cl_cancha_msg_insert" on cl_cancha_messages
+  for insert with check (
+    conversation_id in (
+      select id from cl_cancha_conversations
+      where team_id  in (select id from cl_teams  where user_id  = auth.uid())
+         or field_id in (select id from cl_fields where owner_id = auth.uid())
+    )
+  );
+
+-- =============================================
 -- Datos iniciales de canchas (opcional)
 -- =============================================
 insert into cl_fields (name, address, sports, price, rating, available) values

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, FlatList,
-  TouchableOpacity, ActivityIndicator,
+  TouchableOpacity, ActivityIndicator, ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
@@ -11,21 +11,31 @@ import { useMyTeam } from '@/hooks/useMyTeam';
 import type { ChatConversation } from '@/constants/MockData';
 import { ChatItem } from '@/components/ChatItem';
 
+type CanchaConv = { id: string; fieldName: string; createdAt: string };
+
 export default function ChatListScreen() {
   const { teamId } = useMyTeam();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [canchaConvs, setCanchaConvs] = useState<CanchaConv[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchConversations = useCallback(async () => {
     if (!teamId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from('cl_conversations')
-      .select('id, team1_id, team2_id, created_at, team1:cl_teams!team1_id(*), team2:cl_teams!team2_id(*)')
-      .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
-      .order('created_at', { ascending: false });
+    const [teamsRes, canchaRes] = await Promise.all([
+      supabase
+        .from('cl_conversations')
+        .select('id, team1_id, team2_id, created_at, team1:cl_teams!team1_id(*), team2:cl_teams!team2_id(*)')
+        .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('cl_cancha_conversations')
+        .select('id, created_at, field:cl_fields!field_id(name)')
+        .eq('team_id', teamId)
+        .order('created_at', { ascending: false }),
+    ]);
 
-    const mapped: ChatConversation[] = (data ?? []).map((row: any) => {
+    const mapped: ChatConversation[] = (teamsRes.data ?? []).map((row: any) => {
       const otherTeamRaw = row.team1_id === teamId ? row.team2 : row.team1;
       return {
         id: row.id,
@@ -35,7 +45,15 @@ export default function ChatListScreen() {
         unread: 0,
       };
     });
+
+    const mappedCanchas: CanchaConv[] = (canchaRes.data ?? []).map((row: any) => ({
+      id: row.id,
+      fieldName: (row.field as any)?.name ?? 'Cancha',
+      createdAt: new Date(row.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+    }));
+
     setConversations(mapped);
+    setCanchaConvs(mappedCanchas);
     setLoading(false);
   }, [teamId]);
 
@@ -57,28 +75,58 @@ export default function ChatListScreen() {
 
       {loading ? (
         <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
-      ) : conversations.length === 0 ? (
+      ) : conversations.length === 0 && canchaConvs.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>💬</Text>
           <Text style={styles.emptyTitle}>Sin conversaciones</Text>
           <Text style={styles.emptyText}>
-            Cuando aceptes o te respondan un desafío, el chat se abrirá automáticamente
+            Cuando aceptes o te respondan un desafío, el chat se abrirá automáticamente.
+            También podés consultar canchas desde la sección de desafíos.
           </Text>
         </View>
       ) : (
-        <FlatList
-          data={conversations}
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <ChatItem
-              conversation={item}
-              onPress={() => router.push(`/chat/${item.team.id}` as any)}
-            />
+        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+          {conversations.length > 0 && (
+            <>
+              {canchaConvs.length > 0 && (
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionHeaderText}>Equipos</Text>
+                </View>
+              )}
+              {conversations.map(item => (
+                <ChatItem
+                  key={item.id}
+                  conversation={item}
+                  onPress={() => router.push(`/chat/${item.team.id}` as any)}
+                />
+              ))}
+            </>
           )}
-          ItemSeparatorComponent={() => null}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
+
+          {canchaConvs.length > 0 && (
+            <>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionHeaderText}>Con canchas</Text>
+              </View>
+              {canchaConvs.map(c => (
+                <TouchableOpacity
+                  key={c.id}
+                  style={styles.canchaItem}
+                  onPress={() => router.push(`/cancha-chat/${c.id}` as any)}
+                >
+                  <View style={styles.canchaAvatar}>
+                    <Text style={styles.canchaAvatarText}>🏟️</Text>
+                  </View>
+                  <View style={styles.canchaInfo}>
+                    <Text style={styles.canchaName}>{c.fieldName}</Text>
+                    <Text style={styles.canchaTime}>Tocá para ver la consulta</Text>
+                  </View>
+                  <Text style={styles.canchaArrow}>›</Text>
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
+        </ScrollView>
       )}
     </SafeAreaView>
   );
@@ -112,4 +160,34 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 48 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.text },
   emptyText: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  sectionHeader: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    backgroundColor: Colors.bg,
+  },
+  sectionHeaderText: { fontSize: 12, fontWeight: '700', color: Colors.textDim, textTransform: 'uppercase', letterSpacing: 0.8 },
+  canchaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  canchaAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  canchaAvatarText: { fontSize: 22 },
+  canchaInfo: { flex: 1 },
+  canchaName: { fontSize: 15, fontWeight: '700', color: Colors.text },
+  canchaTime: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
+  canchaArrow: { fontSize: 20, color: Colors.textDim },
 });

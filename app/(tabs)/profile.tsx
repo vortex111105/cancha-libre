@@ -1,15 +1,27 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
   ScrollView, TouchableOpacity, Alert, ActivityIndicator, Switch
 } from 'react-native';
+import { router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { LevelBadge, SportBadge } from '@/components/Badge';
 import { supabase } from '@/lib/supabase';
+import { mapUser } from '@/lib/mappers';
 import { useMyTeam } from '@/hooks/useMyTeam';
+import type { User } from '@/constants/MockData';
 
 export default function ProfileScreen() {
   const { team, loading } = useMyTeam();
+  const [userProfile, setUserProfile] = useState<User | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data } = await supabase.from('cl_users').select('*').eq('id', user.id).single();
+      if (data) setUserProfile(mapUser(data));
+    });
+  }, []);
 
   if (loading) {
     return (
@@ -23,8 +35,7 @@ export default function ProfileScreen() {
     if (!userProfile) return;
     try {
       await supabase.from('cl_users').update({ looking_for_team: value }).eq('id', userProfile.id);
-      require('expo-router').router.replace('/(tabs)/profile'); // fast refresh hack or better, refetch
-      refetch();
+      setUserProfile(prev => prev ? { ...prev, lookingForTeam: value } : prev);
     } catch (e) {
       console.error(e);
     }

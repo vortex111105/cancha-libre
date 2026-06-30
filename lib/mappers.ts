@@ -1,4 +1,4 @@
-import type { Team } from '@/constants/MockData';
+import type { Field, FieldSlot, Team } from '@/constants/MockData';
 
 export function mapTeam(row: Record<string, any>): Team {
   return {
@@ -22,6 +22,35 @@ export function mapTeam(row: Record<string, any>): Team {
     inviteCode: row.invite_code,
     lat: row.lat,
     lng: row.lng,
+  };
+}
+
+export function mapField(row: Record<string, any>): Field {
+  return {
+    id: row.id,
+    name: row.name,
+    address: row.address ?? '',
+    sports: row.sports ?? [],
+    price: row.price ?? 0,
+    lat: row.lat,
+    lng: row.lng,
+    rating: row.rating ?? 0,
+    available: row.available ?? true,
+    description: row.description ?? '',
+    photos: row.photos ?? [],
+    ownerId: row.owner_id,
+  };
+}
+
+export function mapFieldSlot(row: Record<string, any>): FieldSlot {
+  return {
+    id: row.id,
+    fieldId: row.field_id,
+    dayOfWeek: row.day_of_week,
+    startTime: row.start_time,
+    endTime: row.end_time,
+    price: row.price,
+    isBooked: row.is_booked ?? false,
   };
 }
 

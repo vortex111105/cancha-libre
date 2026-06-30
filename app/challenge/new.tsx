@@ -189,6 +189,22 @@ export default function NewChallengeScreen() {
                       <Text style={styles.fieldName}>{field.name}</Text>
                       <Text style={styles.fieldAddress}>{field.address}</Text>
                       <Text style={styles.fieldSports}>{(field.sports ?? []).join(' · ')}</Text>
+                      <TouchableOpacity
+                        style={styles.consultBtn}
+                        onPress={async () => {
+                          if (!myTeamId) return;
+                          const { data, error } = await supabase
+                            .from('cl_cancha_conversations')
+                            .upsert({ team_id: myTeamId, field_id: field.id }, { onConflict: 'team_id,field_id' })
+                            .select('id')
+                            .single();
+                          if (!error && data) {
+                            router.push(`/cancha-chat/${data.id}` as any);
+                          }
+                        }}
+                      >
+                        <Text style={styles.consultBtnText}>💬 Consultar</Text>
+                      </TouchableOpacity>
                     </View>
                     <View style={styles.fieldRight}>
                       <Text style={styles.fieldPrice}>${(field.price ?? 0).toLocaleString()}/h</Text>
@@ -337,6 +353,15 @@ const styles = StyleSheet.create({
   fieldName: { fontSize: 14, fontWeight: '700', color: Colors.text },
   fieldAddress: { fontSize: 12, color: Colors.textMuted },
   fieldSports: { fontSize: 11, color: Colors.primary, fontWeight: '600' },
+  consultBtn: {
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.blueMuted,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  consultBtnText: { fontSize: 12, color: Colors.blue, fontWeight: '600' },
   fieldRight: { alignItems: 'flex-end', gap: 4 },
   fieldPrice: { fontSize: 14, fontWeight: '700', color: Colors.accent },
   fieldRating: { fontSize: 12, color: Colors.textMuted },
