@@ -101,6 +101,14 @@ export default function RootLayout() {
             presentation: 'modal',
           }}
         />
+        <Stack.Screen
+          name="challenge/rate"
+          options={{
+            title: 'Calificar partido',
+            headerBackTitle: 'Volver',
+            presentation: 'modal',
+          }}
+        />
       </Stack>
     </>
   );

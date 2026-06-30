@@ -19,6 +19,7 @@ export interface Team {
   description: string;
   availableDays: string[];
   rating: number;
+  ratingCount?: number;
   inviteCode?: string;
   lat?: number;
   lng?: number;
@@ -45,6 +46,9 @@ export interface Challenge {
   proposedTime: string;
   field?: string;
   message: string;
+  isCompleted?: boolean;
+  ratingFromTeam?: number;
+  ratingToTeam?: number;
   createdAt: string;
 }
 

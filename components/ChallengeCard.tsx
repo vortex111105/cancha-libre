@@ -7,6 +7,7 @@ interface Props {
   challenge: Challenge;
   onAccept?: () => void;
   onDecline?: () => void;
+  onRate?: () => void;
 }
 
 const statusLabels: Record<string, { label: string; color: string; bg: string }> = {
@@ -15,8 +16,8 @@ const statusLabels: Record<string, { label: string; color: string; bg: string }>
   declined: { label: 'Rechazado', color: Colors.danger, bg: Colors.dangerMuted },
 };
 
-export function ChallengeCard({ challenge, onAccept, onDecline }: Props) {
-  const { team, type, status, proposedDate, proposedTime, field, message, createdAt } = challenge;
+export function ChallengeCard({ challenge, onAccept, onDecline, onRate }: Props) {
+  const { team, type, status, proposedDate, proposedTime, field, message, createdAt, isCompleted } = challenge;
   const statusStyle = statusLabels[status];
   const isIncoming = type === 'incoming';
 
@@ -66,9 +67,19 @@ export function ChallengeCard({ challenge, onAccept, onDecline }: Props) {
         </View>
       )}
 
-      {status === 'accepted' && (
+      {status === 'accepted' && !isCompleted && (
+        <View style={{gap: 8}}>
+          <View style={styles.acceptedBanner}>
+            <Text style={styles.acceptedText}>✅ ¡Partido confirmado! Coordiná por el chat.</Text>
+          </View>
+          <TouchableOpacity style={styles.rateBtn} onPress={onRate}>
+            <Text style={styles.rateBtnText}>⭐ Calificar Rival</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {status === 'accepted' && isCompleted && (
         <View style={styles.acceptedBanner}>
-          <Text style={styles.acceptedText}>✅ ¡Partido confirmado! Coordiná por el chat.</Text>
+          <Text style={styles.acceptedText}>⭐ Partido calificado</Text>
         </View>
       )}
     </View>
@@ -226,5 +237,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  rateBtn: {
+    backgroundColor: Colors.accent,
+    borderRadius: 10,
+    padding: 10,
+    alignItems: 'center',
+  },
+  rateBtnText: {
+    color: '#000',
+    fontWeight: '700',
+    fontSize: 13,
   },
 });

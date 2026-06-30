@@ -22,6 +22,7 @@ create table if not exists cl_teams (
   losses          int default 0,
   draws           int default 0,
   rating          float default 0,
+  rating_count    int default 0,
   description     text,
   available_days  text[] default '{}',
   color           text default '#4ADE80',
@@ -47,6 +48,9 @@ create table if not exists cl_challenges (
   proposed_time   text,
   field_id        uuid,
   message         text,
+  is_completed    boolean default false,
+  rating_from_team integer,
+  rating_to_team   integer,
   created_at      timestamptz default now()
 );
 

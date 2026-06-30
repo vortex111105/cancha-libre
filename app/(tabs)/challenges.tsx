@@ -38,6 +38,7 @@ export default function ChallengesScreen() {
         proposedDate: row.proposed_date ?? '',
         proposedTime: row.proposed_time ?? '',
         message: row.message ?? '',
+        isCompleted: row.is_completed ?? false,
         createdAt: row.created_at,
       };
     });
@@ -132,6 +133,10 @@ export default function ChallengesScreen() {
                 challenge={challenge}
                 onAccept={() => handleAccept(challenge.id)}
                 onDecline={() => handleDecline(challenge.id)}
+                onRate={() => require('expo-router').router.push({ 
+                  pathname: '/challenge/rate', 
+                  params: { challengeId: challenge.id, teamId: challenge.team.id, isIncoming: String(challenge.type === 'incoming') } 
+                })}
               />
             ))
           )}

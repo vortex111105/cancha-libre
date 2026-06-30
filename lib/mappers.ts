@@ -13,6 +13,7 @@ export function mapTeam(row: Record<string, any>): Team {
     losses: row.losses ?? 0,
     draws: row.draws ?? 0,
     rating: row.rating ?? 0,
+    ratingCount: row.rating_count ?? 0,
     distance: 0,
     members: row.members ?? 1,
     availableDays: row.available_days ?? [],
