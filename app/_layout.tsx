@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useRootNavigationState, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { Colors } from '@/constants/Colors';
@@ -21,16 +21,18 @@ export default function RootLayout() {
     }
   }, [expoPushToken, ready]);
 
+  const rootNavigationState = useRootNavigationState();
+  const segments = useSegments();
+  const [session, setSession] = useState<any>(null);
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        routeByRole(session.user.id).finally(() => setReady(true));
-      } else {
-        setReady(true);
-      }
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setReady(true);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, _session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      setSession(currentSession);
       if (event === 'SIGNED_OUT') {
         router.replace('/');
       }
@@ -38,6 +40,16 @@ export default function RootLayout() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!ready || !rootNavigationState?.key) return;
+
+    const inAuthGroup = segments[0] === '(auth)' || segments.length === 0 || segments[0] === 'index';
+    
+    if (session && inAuthGroup) {
+      setTimeout(() => routeByRole(session.user.id), 0);
+    }
+  }, [ready, rootNavigationState?.key, session, segments]);
 
   if (!ready) {
     return (

@@ -136,7 +136,7 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Mi Equipo</Text>
-          <TouchableOpacity style={styles.editBtn} onPress={() => Alert.alert('Editar perfil', 'Próximamente')}>
+          <TouchableOpacity style={styles.editBtn} onPress={() => require('expo-router').router.push('/profile/edit-player' as any)}>
             <Text style={styles.editBtnText}>✏ Editar</Text>
           </TouchableOpacity>
         </View>
@@ -256,7 +256,7 @@ export default function ProfileScreen() {
         <View style={styles.actions}>
           <TouchableOpacity
             style={styles.shareBtn}
-            onPress={() => Alert.alert('Compartir', 'Próximamente')}
+            onPress={() => Share.share({ message: `¡Mirá mi equipo ${team.name} en Cancha Libre!\nNivel: ${team.level}\n\n¡Sumate o desafianos en la app!` })}
           >
             <Text style={styles.shareBtnText}>📤 Compartir perfil</Text>
           </TouchableOpacity>
