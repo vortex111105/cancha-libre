@@ -6,10 +6,25 @@ import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { routeByRole } from '@/lib/auth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { 
+  useFonts, 
+  Inter_400Regular, 
+  Inter_500Medium, 
+  Inter_600SemiBold, 
+  Inter_700Bold, 
+  Inter_800ExtraBold 
+} from '@expo-google-fonts/inter';
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
   const { expoPushToken } = usePushNotifications();
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+  });
 
   useEffect(() => {
     if (expoPushToken?.data) {
@@ -51,7 +66,7 @@ export default function RootLayout() {
     }
   }, [ready, rootNavigationState?.key, session, segments]);
 
-  if (!ready) {
+  if (!ready || !fontsLoaded) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.bg, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator color={Colors.primary} size="large" />

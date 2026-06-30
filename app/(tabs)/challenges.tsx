@@ -9,6 +9,7 @@ import { ChallengeCard } from '@/components/ChallengeCard';
 import { supabase } from '@/lib/supabase';
 import { mapTeam } from '@/lib/mappers';
 import { useMyTeam } from '@/hooks/useMyTeam';
+import { Typography } from '@/constants/Typography';
 
 type Tab = 'incoming' | 'outgoing';
 
@@ -101,9 +102,11 @@ export default function ChallengesScreen() {
           <Text style={styles.title}>Desafíos</Text>
         </View>
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>⚡</Text>
-          <Text style={styles.emptyTitle}>Necesitás un equipo</Text>
-          <Text style={styles.emptyText}>
+          <View style={styles.emptyIconContainer}>
+            <Text style={styles.emptyIcon}>⚡</Text>
+          </View>
+          <Text style={[Typography.h3, styles.emptyTitle]}>Necesitás un equipo</Text>
+          <Text style={[Typography.body, styles.emptyText]}>
             Creá o unite a un equipo para poder enviar y recibir desafíos.
           </Text>
         </View>
@@ -154,11 +157,13 @@ export default function ChallengesScreen() {
         >
           {displayed.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>{activeTab === 'incoming' ? '📭' : '📬'}</Text>
-              <Text style={styles.emptyTitle}>
+              <View style={styles.emptyIconContainer}>
+                <Text style={styles.emptyIcon}>{activeTab === 'incoming' ? '📭' : '📬'}</Text>
+              </View>
+              <Text style={[Typography.h3, styles.emptyTitle]}>
                 {activeTab === 'incoming' ? 'Sin desafíos recibidos' : 'No enviaste desafíos aún'}
               </Text>
-              <Text style={styles.emptyText}>
+              <Text style={[Typography.body, styles.emptyText]}>
                 {activeTab === 'incoming'
                   ? 'Cuando otros equipos te desafíen, aparecerán acá'
                   : 'Buscá equipos y mandá tu primer desafío'}
@@ -234,9 +239,17 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accent,
   },
   list: { flex: 1 },
-  listContent: { paddingHorizontal: 20, paddingBottom: 24 },
-  empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyIcon: { fontSize: 48 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.text },
-  emptyText: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  listContent: { paddingHorizontal: 20, paddingBottom: 24, paddingTop: 10 },
+  empty: { alignItems: 'center', paddingTop: 60, gap: 12, paddingHorizontal: 40 },
+  emptyIconContainer: {
+    width: 80, height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.surface,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 8,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  emptyIcon: { fontSize: 40, opacity: 0.8 },
+  emptyTitle: { color: Colors.text, textAlign: 'center' },
+  emptyText: { color: Colors.textMuted, textAlign: 'center' },
 });

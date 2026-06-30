@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
-  ScrollView, TouchableOpacity, ActivityIndicator,
+  ScrollView, TouchableOpacity, ActivityIndicator, ImageBackground
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import type { Sport, Team } from '@/constants/MockData';
@@ -10,6 +11,7 @@ import { TeamCard } from '@/components/TeamCard';
 import { supabase } from '@/lib/supabase';
 import { mapTeam } from '@/lib/mappers';
 import { useMyTeam } from '@/hooks/useMyTeam';
+import { Typography } from '@/constants/Typography';
 
 const SPORT_FILTERS: (Sport | 'Todos')[] = ['Todos', 'Fútbol 5vs5', 'Fútbol 7vs7', 'Fútbol 8vs8', 'Fútbol 11vs11', 'Básquet 3x3', 'Básquet 5x5', 'Pádel Single (1vs1)', 'Pádel Parejas'];
 
@@ -67,10 +69,15 @@ export default function HomeScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.heroCard}>
+            <LinearGradient
+              colors={[Colors.primaryDark, Colors.primary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.heroCard}
+            >
               <View style={styles.heroContent}>
-                <Text style={styles.heroTitle}>Encontrá{'\n'}tu próximo rival</Text>
-                <Text style={styles.heroSub}>{teams.length} equipos cerca de vos</Text>
+                <Text style={[Typography.h2, styles.heroTitle]}>Encontrá{'\n'}tu próximo rival</Text>
+                <Text style={[Typography.body, styles.heroSub]}>{teams.length} equipos cerca de vos</Text>
                 <TouchableOpacity
                   style={styles.heroBtn}
                   onPress={() => router.push('/(tabs)/search')}
@@ -79,7 +86,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </View>
               <Text style={styles.heroEmoji}>⚽</Text>
-            </View>
+            </LinearGradient>
 
             <View style={styles.quickStats}>
               <QuickStat label="Equipos\ncerca" value={teams.length.toString()} color={Colors.primary} />
@@ -143,9 +150,11 @@ export default function HomeScreen() {
           <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
         ) : filtered.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>🔍</Text>
-            <Text style={styles.emptyTitle}>Sin equipos por ahora</Text>
-            <Text style={styles.emptyText}>Cuando otros equipos se registren, aparecerán acá</Text>
+            <View style={styles.emptyIconContainer}>
+              <Text style={styles.emptyIcon}>🔍</Text>
+            </View>
+            <Text style={[Typography.h3, styles.emptyTitle]}>Sin equipos por ahora</Text>
+            <Text style={[Typography.body, styles.emptyText]}>Cuando otros equipos se registren y cumplan los filtros, aparecerán acá</Text>
           </View>
         ) : (
           <View style={styles.teamList}>
@@ -231,15 +240,11 @@ const styles = StyleSheet.create({
   },
   heroContent: { flex: 1 },
   heroTitle: {
-    fontSize: 24,
-    fontWeight: '800',
     color: '#fff',
-    lineHeight: 30,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   heroSub: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.75)',
+    color: 'rgba(255,255,255,0.85)',
     marginBottom: 16,
   },
   heroBtn: {
@@ -363,9 +368,17 @@ const styles = StyleSheet.create({
   filterChipTextActive: { color: Colors.primary },
   teamList: { paddingHorizontal: 20, paddingBottom: 24 },
   empty: { alignItems: 'center', paddingTop: 60, gap: 12, paddingHorizontal: 40 },
-  emptyIcon: { fontSize: 48 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.text },
-  emptyText: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  emptyIconContainer: {
+    width: 80, height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.surface,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 8,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  emptyIcon: { fontSize: 40, opacity: 0.8 },
+  emptyTitle: { color: Colors.text, textAlign: 'center' },
+  emptyText: { color: Colors.textMuted, textAlign: 'center' },
   mapPlaceholder: {
     margin: 20,
     borderRadius: 20,

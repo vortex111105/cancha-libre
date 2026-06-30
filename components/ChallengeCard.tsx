@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '@/constants/Colors';
+import { Typography } from '@/constants/Typography';
 import { Challenge } from '@/constants/MockData';
 
 interface Props {
@@ -22,15 +24,20 @@ export function ChallengeCard({ challenge, onAccept, onDecline, onRate }: Props)
   const isIncoming = type === 'incoming';
 
   return (
-    <View style={styles.card}>
+    <LinearGradient
+      colors={[Colors.cardAlt, Colors.card]}
+      style={styles.card}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
       <View style={styles.header}>
         <View style={styles.teamRow}>
           <View style={[styles.avatar, { borderColor: team.color }]}>
             <Text style={styles.avatarText}>{team.avatar}</Text>
           </View>
           <View style={styles.teamInfo}>
-            <Text style={styles.teamName}>{team.name}</Text>
-            <Text style={styles.teamSub}>{team.neighborhood} · {team.sport}</Text>
+            <Text style={[Typography.subtitle, styles.teamName]}>{team.name}</Text>
+            <Text style={[Typography.label, styles.teamSub]}>{team.neighborhood} · {team.sport}</Text>
           </View>
         </View>
         <View style={styles.badges}>
@@ -51,10 +58,10 @@ export function ChallengeCard({ challenge, onAccept, onDecline, onRate }: Props)
       </View>
 
       <View style={styles.messageBox}>
-        <Text style={styles.messageText}>"{message}"</Text>
+        <Text style={[Typography.body, styles.messageText]}>"{message}"</Text>
       </View>
 
-      <Text style={styles.createdAt}>{createdAt}</Text>
+      <Text style={[Typography.label, styles.createdAt]}>{createdAt}</Text>
 
       {isIncoming && status === 'pending' && (
         <View style={styles.actions}>
@@ -82,7 +89,7 @@ export function ChallengeCard({ challenge, onAccept, onDecline, onRate }: Props)
           <Text style={styles.acceptedText}>⭐ Partido calificado</Text>
         </View>
       )}
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -90,52 +97,53 @@ function DetailRow({ icon, label }: { icon: string; label: string }) {
   return (
     <View style={styles.detailRow}>
       <Text style={styles.detailIcon}>{icon}</Text>
-      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={[Typography.body, styles.detailLabel]}>{label}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.card,
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    padding: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
   header: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   teamRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 10,
+    gap: 14,
+    marginBottom: 12,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
   },
   avatarText: {
-    fontSize: 22,
+    fontSize: 24,
   },
   teamInfo: {
     flex: 1,
   },
   teamName: {
-    fontSize: 16,
-    fontWeight: '700',
     color: Colors.text,
+    fontSize: 17,
   },
   teamSub: {
-    fontSize: 12,
-    color: Colors.textMuted,
     marginTop: 2,
   },
   badges: {
@@ -144,109 +152,115 @@ const styles = StyleSheet.create({
   },
   typeBadge: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: 8,
   },
   typeBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   statusBadge: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: 8,
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   details: {
-    gap: 6,
-    marginBottom: 12,
+    gap: 8,
+    marginBottom: 16,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   detailIcon: {
-    fontSize: 14,
+    fontSize: 15,
   },
   detailLabel: {
-    fontSize: 13,
     color: Colors.textMuted,
   },
   messageBox: {
-    backgroundColor: Colors.surface,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
     borderLeftWidth: 3,
     borderLeftColor: Colors.primary,
   },
   messageText: {
-    fontSize: 13,
     color: Colors.textMuted,
     fontStyle: 'italic',
-    lineHeight: 18,
   },
   createdAt: {
     fontSize: 11,
-    color: Colors.textDim,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   actions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   declineBtn: {
     flex: 1,
     backgroundColor: Colors.dangerMuted,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.danger,
+    borderColor: 'rgba(239,68,68,0.3)',
   },
   declineBtnText: {
     color: Colors.danger,
-    fontWeight: '700',
-    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 15,
   },
   acceptBtn: {
     flex: 2,
     backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   acceptBtnText: {
     color: '#000',
-    fontWeight: '700',
-    fontSize: 14,
+    fontFamily: 'Inter_800ExtraBold',
+    fontSize: 15,
   },
   acceptedBanner: {
     backgroundColor: Colors.primaryMuted,
-    borderRadius: 10,
-    padding: 10,
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: 'rgba(6,182,212,0.3)',
   },
   acceptedText: {
     color: Colors.primary,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
     textAlign: 'center',
   },
   rateBtn: {
     backgroundColor: Colors.accent,
-    borderRadius: 10,
-    padding: 10,
+    borderRadius: 12,
+    padding: 14,
     alignItems: 'center',
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   rateBtnText: {
     color: '#000',
-    fontWeight: '700',
-    fontSize: 13,
+    fontFamily: 'Inter_800ExtraBold',
+    fontSize: 14,
   },
 });
