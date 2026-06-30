@@ -26,7 +26,6 @@ export default function RootLayout() {
       if (session) {
         routeByRole(session.user.id).finally(() => setReady(true));
       } else {
-        router.replace('/(auth)/login');
         setReady(true);
       }
     });
@@ -35,7 +34,7 @@ export default function RootLayout() {
       if (event === 'SIGNED_IN' && session) {
         routeByRole(session.user.id);
       } else if (event === 'SIGNED_OUT') {
-        router.replace('/(auth)/login');
+        router.replace('/');
       }
     });
 
@@ -62,6 +61,7 @@ export default function RootLayout() {
           headerShadowVisible: false,
         }}
       >
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(cancha-onboarding)" options={{ headerShown: false }} />
         <Stack.Screen name="(cancha-portal)" options={{ headerShown: false }} />
