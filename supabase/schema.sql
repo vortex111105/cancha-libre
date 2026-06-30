@@ -53,6 +53,7 @@ create table if not exists cl_challenges (
   rating_to_team   integer,
   score_from_team  integer,
   score_to_team    integer,
+  payment_status  text default 'pending',
   created_at      timestamptz default now()
 );
 

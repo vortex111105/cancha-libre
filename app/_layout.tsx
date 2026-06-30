@@ -111,6 +111,29 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="tournaments/coming-soon"
+          options={{
+            title: 'Próximamente',
+            headerBackTitle: 'Volver',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="payment/split"
+          options={{
+            title: 'Asegurar Reserva',
+            headerBackTitle: 'Volver',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="payment/success"
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
           name="cancha-chat/[id]"
           options={{
             title: 'Consulta con la cancha',

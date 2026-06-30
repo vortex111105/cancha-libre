@@ -15,7 +15,7 @@ type Tab = 'incoming' | 'outgoing';
 export default function ChallengesScreen() {
   const { teamId, userId, loading: teamLoading } = useMyTeam();
   const [activeTab, setActiveTab] = useState<Tab>('incoming');
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [challenges, setChallenges] = useState<(Challenge & { field?: any })[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchChallenges = useCallback(async () => {
@@ -23,11 +23,11 @@ export default function ChallengesScreen() {
     setLoading(true);
     const { data } = await supabase
       .from('cl_challenges')
-      .select('*, from_team:cl_teams!from_team(*), to_team:cl_teams!to_team(*)')
+      .select('*, from_team:cl_teams!from_team(*), to_team:cl_teams!to_team(*), field:cl_fields(*)')
       .or(`from_team.eq.${teamId},to_team.eq.${teamId}`)
       .order('created_at', { ascending: false });
 
-    const mapped: Challenge[] = (data ?? []).map((row: any) => {
+    const mapped = (data ?? []).map((row: any) => {
       const isIncoming = row.to_team?.id === teamId;
       const otherTeamRaw = isIncoming ? row.from_team : row.to_team;
       return {
@@ -40,7 +40,8 @@ export default function ChallengesScreen() {
         message: row.message ?? '',
         isCompleted: row.is_completed ?? false,
         createdAt: row.created_at,
-      };
+        field: row.field,
+      } as Challenge & { field?: any };
     });
     setChallenges(mapped);
     setLoading(false);
@@ -52,9 +53,21 @@ export default function ChallengesScreen() {
   const outgoing = challenges.filter(c => c.type === 'outgoing');
   const pendingCount = incoming.filter(c => c.status === 'pending').length;
 
-  const handleAccept = async (id: string) => {
-    await supabase.from('cl_challenges').update({ status: 'accepted' }).eq('id', id);
-    setChallenges(prev => prev.map(c => c.id === id ? { ...c, status: 'accepted' as const } : c));
+  const handleAccept = async (challenge: Challenge & { field?: any }) => {
+    if (challenge.field) {
+      require('expo-router').router.push({
+        pathname: '/payment/split',
+        params: { 
+          challengeId: challenge.id, 
+          fieldName: challenge.field.name,
+          fieldPrice: challenge.field.price,
+          date: challenge.proposedDate
+        }
+      });
+    } else {
+      await supabase.from('cl_challenges').update({ status: 'accepted' }).eq('id', challenge.id);
+      setChallenges(prev => prev.map(c => c.id === challenge.id ? { ...c, status: 'accepted' as const } : c));
+    }
   };
 
   const handleDecline = (id: string) => {
@@ -156,7 +169,7 @@ export default function ChallengesScreen() {
               <ChallengeCard
                 key={challenge.id}
                 challenge={challenge}
-                onAccept={() => handleAccept(challenge.id)}
+                onAccept={() => handleAccept(challenge)}
                 onDecline={() => handleDecline(challenge.id)}
                 onRate={() => require('expo-router').router.push({ 
                   pathname: '/challenge/rate', 

@@ -17,3 +17,5 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before 
 - **UI/UX**: Nueva Landing Page en `app/index.tsx`. Añadidos estados vacíos y fixes de spinners infinitos en `challenges.tsx` y `chat.tsx` para usuarios sin equipo.
 - **Historial de Partidos Real**: Añadidos `score_from_team` y `score_to_team` a `cl_challenges` (cargar mediante SQL Editor). Pantalla de calificación (`rate.tsx`) ahora exige cargar los goles. El Perfil de Equipo lee el historial directo de Supabase y calcula V/E/D.
 - **Botón + en Perfil**: Integrado con la API de `Share` nativa de React Native para compartir el código de invitación del equipo.
+- **Ligas y Torneos**: Añadido un banner en `home.tsx` y modal placeholder `tournaments/coming-soon.tsx`.
+- **Split Payments UI (Mockup MP)**: Modificado `challenges.tsx` para que al aceptar un desafío con cancha redirija a `payment/split.tsx`. Creado el flujo UI para dividir la seña de la cancha entre jugadores y un modal de éxito (`payment/success.tsx`). Actualizado schema con `payment_status` en `cl_challenges`.

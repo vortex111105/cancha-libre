@@ -86,6 +86,17 @@ export default function HomeScreen() {
               <QuickStat label="Deporte\nfavorito" value={myTeam?.sport?.split(' ')[0] ?? '—'} color={Colors.blue} />
               <QuickStat label="Nivel\nactual" value={myTeam?.level?.slice(0, 3) ?? '—'} color={Colors.accent} />
             </View>
+
+            <TouchableOpacity 
+              style={styles.tournamentsBanner} 
+              onPress={() => router.push('/tournaments/coming-soon' as any)}
+            >
+              <View style={styles.tournamentsBannerContent}>
+                <Text style={styles.tournamentsBannerTitle}>🏆 Ligas y Torneos</Text>
+                <Text style={styles.tournamentsBannerSub}>Competí por la gloria. Muy pronto en Cancha Libre.</Text>
+              </View>
+              <Text style={styles.tournamentsBannerArrow}>→</Text>
+            </TouchableOpacity>
           </>
         )}
 
@@ -279,6 +290,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
     lineHeight: 13,
+  },
+  tournamentsBanner: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.accent,
+  },
+  tournamentsBannerContent: {
+    flex: 1,
+  },
+  tournamentsBannerTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.accent,
+    marginBottom: 4,
+  },
+  tournamentsBannerSub: {
+    fontSize: 13,
+    color: Colors.textMuted,
+  },
+  tournamentsBannerArrow: {
+    fontSize: 20,
+    color: Colors.accent,
+    opacity: 0.5,
+    marginLeft: 12,
   },
   sectionHeader: {
     flexDirection: 'row',
