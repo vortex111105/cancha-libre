@@ -47,10 +47,18 @@ export default function HomeScreen() {
               📍 {myTeam ? `${myTeam.neighborhood}, ${myTeam.city}` : 'Buenos Aires'}
             </Text>
           </View>
-          <TouchableOpacity style={styles.notifBtn}>
-            <Text style={styles.notifIcon}>🔔</Text>
-            <View style={styles.notifDot} />
-          </TouchableOpacity>
+          <View style={styles.topActions}>
+            <TouchableOpacity 
+              style={styles.profileBtn}
+              onPress={() => router.push('/profile/me')}
+            >
+              <Text style={styles.profileBtnText}>{(displayName || 'J')[0].toUpperCase()}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.notifBtn}>
+              <Text style={styles.notifIcon}>🔔</Text>
+              <View style={styles.notifDot} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {!myTeam ? (
@@ -213,8 +221,28 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
   },
-  greeting: { fontSize: 18, fontWeight: '700', color: Colors.text },
-  location: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
+  greeting: { fontSize: 18, fontFamily: 'Inter_700Bold', color: Colors.text },
+  location: { fontSize: 13, color: Colors.textMuted, marginTop: 2, fontFamily: 'Inter_500Medium' },
+  topActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  profileBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.primaryMuted,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileBtnText: {
+    color: Colors.primary,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 14,
+  },
   notifBtn: { position: 'relative', padding: 4 },
   notifIcon: { fontSize: 22 },
   notifDot: {

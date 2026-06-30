@@ -109,7 +109,15 @@ export default function RootLayout() {
         <Stack.Screen
           name="profile/edit-player"
           options={{
-            title: 'Editar perfil',
+            title: 'Editar Equipo',
+            headerBackTitle: 'Volver',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="profile/me"
+          options={{
+            title: 'Mi Perfil',
             headerBackTitle: 'Volver',
             presentation: 'modal',
           }}
